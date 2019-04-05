@@ -16,14 +16,14 @@ library("crayon")
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 
 # load the dataset
-data          <- read.csv("ilpd.csv", TRUE)
+data          <- read.csv("parkinson.csv", TRUE)
 
 # heuristic parameter which controls the value of alpha
-h             <<- 1.3
+h             <<- 1.2
 
 # feature location of idependent and dependent variables
-independent   <- 2:10
-dependent     <- 11
+independent   <- 1:22
+dependent     <- 23
 
 # number of iterations of the model
 iterations    <- 100
@@ -236,14 +236,14 @@ heuristic_adaboost <- function(X, y, n_rounds = 100,
     # if k > 1 model is best
     if (heu_list[i] == 1){ #more weight in mis
       
-      alpha <- (1/(h + 1)) * log((1/h) * ((1-e)/e))
-      
+      #alpha <- (1/(h + 1)) * log((1/h) * ((1-e)/e))
+      alpha <- (1/(2*h)) * log((1-e)/e)
       # update weight of each data
       for (tt in 1:length(w)){
         # if prediction == actual value , less weight on data
         if (alpha * pred[tt] * y[tt] > 0){
         
-          w[tt] <- w[tt] * (exp((-alpha)))
+          w[tt] <- w[tt] * (exp(h * (-alpha)))
           
         }
         # if prediction != actual value, more weight on data
@@ -270,15 +270,15 @@ heuristic_adaboost <- function(X, y, n_rounds = 100,
     # if k < 1 model is best
     if (heu_list[i] == -1){
       
-      alpha <- (1/(1/h+1)) * log((h)*((1-e)/e))
-      
+      #alpha <- (1/(1/h+1)) * log((h)*((1-e)/e))
+      alpha <- (2*h) * log((1-e)/e)
       # update weight of each data
       for (tt in 1:length(w)){
         # if prediction == actual value , less weight on data
         if (alpha * pred[tt] * y[tt] > 0){
           
-          w[tt] <- w[tt] * (exp((-alpha)))
-          
+          w[tt] <- w[tt] * (exp((1/h)*(-alpha)))
+                            
         }
         # if prediction != actual value, more weight on data
         else{
@@ -466,8 +466,6 @@ kfold_heu <- function(tt){
 }
 
 
-
-
 plot_result <- function(qwe){
   # initialize heu_list and res_3
   heu_list <<- list()
@@ -601,5 +599,8 @@ plot_result <- function(qwe){
 
 
 plot_result(iterations)
+
+
+
 
 
