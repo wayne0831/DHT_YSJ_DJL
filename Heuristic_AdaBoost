@@ -1,7 +1,9 @@
-library("ggplot2")
-library("rpart")
-library("rpart.plot")
-library("crayon")
+pkgs <- c("rpart", "raprt.plot", "crayon")
+
+sapply(pkgs, install.packages, character.only = TRUE)
+
+sapply(pkgs, require, character.only = TRUE)
+
 ####################################################################################################
 ## k > 1  
 ## red   : more weight on mis-classified data 
@@ -12,24 +14,19 @@ library("crayon")
 # 0 : k = 1 ; basic model
 # 1 : k > 1 ; more weight on misclassified data
 
-data$X <- as.factor(data$X)
-
-ggplot(data = data, 
-       mapping = aes(x = data$x, y = data$y)) + geom_point(colour = c("red", "blue")[data$X])
-
 ####################################################################################################
 # set work directory
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 
 # load the dataset
-data          <- read.csv('simulation_envelope.csv', TRUE)
+data          <- read.csv('breast-cancer-coimbra.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
-k             <<- 1.3
+k             <<- 1.6
 
 # feature location of idependent and dependent variables
-independent   <- 1:2
-dependent     <- 3
+independent   <- 1:9
+dependent     <- 10
 
 # number of iterations of the model
 iterations    <- 100
@@ -278,7 +275,7 @@ heuristic_adaboost <- function(X, y, n_rounds = 100,
     if (heu_list[i] == -1){
       
       #alpha <- (h+1)) * log((h)*((1-e)/e))
-      alpha <- 1/(2*(1/k)) * log((1-e)/e)
+      alpha <- (k/2) * log((1-e)/e)
       
       # update weight of each data
       for (tt in 1:length(w)){
@@ -449,7 +446,6 @@ kfold_heu <- function(tt){
     prediction_hm   <- rbind(prediction_hm, temp_hm)
     
     # 실제값(testset) testsetCopy에 추가.
-    
     testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
     
     # 예측값과 실제값 데이터프레임.
@@ -606,6 +602,7 @@ plot_result <- function(qwe){
 }
 
 
-system.time(plot_result(iterations))
+plot_result(iterations)
+
 
 
