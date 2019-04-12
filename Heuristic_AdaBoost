@@ -19,14 +19,14 @@ sapply(pkgs, require, character.only = TRUE)
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 
 # load the dataset
-data          <- read.csv('breast-cancer-coimbra.csv', TRUE)
+data          <- read.csv('transfusion.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
-k             <<- 1.6
+k             <<- 2.6
 
 # feature location of idependent and dependent variables
-independent   <- 1:9
-dependent     <- 10
+independent   <- 1:4
+dependent     <- 5
 
 # number of iterations of the model
 iterations    <- 100
@@ -121,7 +121,7 @@ basic_adaboost <- function(X, y, n_rounds = 100,
     if(e >= 0.5){
       
       e <- 1 - e
-    
+      
     }
     
     else{
@@ -163,7 +163,7 @@ basic_adaboost <- function(X, y, n_rounds = 100,
     if(i == 1){
       
       terms       <- tree$terms
-  
+      
     }
     
     else{
@@ -239,14 +239,14 @@ heuristic_adaboost <- function(X, y, n_rounds = 100,
     # if k > 1 model is best
     if (heu_list[i] == 1){ #more weight in mis
       
-     #alpha <- (1/(h + 1)) * log((1/h) * ((1-e)/e))
+      #alpha <- (1/(h + 1)) * log((1/h) * ((1-e)/e))
       alpha <- 1/(2*k) * log((1-e)/e)
       
       # update weight of each data
       for (tt in 1:length(w)){
         # if prediction == actual value , less weight on data
         if (alpha * pred[tt] * y[tt] > 0){
-        
+          
           w[tt] <- w[tt] * (exp(k * (-alpha)))
           
         }
@@ -283,7 +283,7 @@ heuristic_adaboost <- function(X, y, n_rounds = 100,
         if (alpha * pred[tt] * y[tt] > 0){
           
           w[tt] <- w[tt] * (exp((1/k)*(-alpha)))
-                            
+          
         }
         # if prediction != actual value, more weight on data
         else{
@@ -387,13 +387,13 @@ kfold_basic <- function(tt){
     
     temp_bm         <- as.data.frame(predict(model_bm, testset))
     
-    # 예측값을 예측 데이터 프레임의 끝에 추가.
+    # ?삁痢↔컪?쓣 ?삁痢? ?뜲?씠?꽣 ?봽?젅?엫?쓽 ?걹?뿉 異붽?.
     prediction_bm   <- rbind(prediction_bm, temp_bm)
     
-    # 실제값(testset) testsetCopy에 추가.
+    # ?떎?젣媛?(testset) testsetCopy?뿉 異붽?.
     testset_copy_bm <- rbind(testset_copy_bm, as.data.frame(testset[, dependent]))
     
-    # 예측값과 실제값 데이터프레임.
+    # ?삁痢↔컪怨? ?떎?젣媛? ?뜲?씠?꽣?봽?젅?엫.
     # add predictions and actual Sepal Length values
     result_bm            <- cbind(prediction_bm, testset_copy_bm[, 1])
     
@@ -442,13 +442,13 @@ kfold_heu <- function(tt){
     
     temp_hm         <- as.data.frame(predict(model_hm, testset))
     
-    # 예측값을 예측 데이터 프레임의 끝에 추가.
+    # ?삁痢↔컪?쓣 ?삁痢? ?뜲?씠?꽣 ?봽?젅?엫?쓽 ?걹?뿉 異붽?.
     prediction_hm   <- rbind(prediction_hm, temp_hm)
     
-    # 실제값(testset) testsetCopy에 추가.
+    # ?떎?젣媛?(testset) testsetCopy?뿉 異붽?.
     testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
     
-    # 예측값과 실제값 데이터프레임.
+    # ?삁痢↔컪怨? ?떎?젣媛? ?뜲?씠?꽣?봽?젅?엫.
     # add predictions and actual Sepal Length values
     result_hm            <- cbind(prediction_hm, testset_copy_hm[, 1])
     
@@ -593,16 +593,19 @@ plot_result <- function(qwe){
   # plot the graph of basic adaboost
   par(new = TRUE)
   plot(1:iterations, result_b, col = "blue", xlab = "", ylab = "", 
-                                             ylim = c(min(min(unlist(result_b)), 
-                                                          min(unlist(result_h))), 
-                                                      max(max(unlist(result_b)), 
-                                                          max(unlist(result_h)))))
+       ylim = c(min(min(unlist(result_b)), 
+                    min(unlist(result_h))), 
+                max(max(unlist(result_b)), 
+                    max(unlist(result_h)))))
   lines(1:iterations, result_b, col = "blue")
-
+  
 }
 
 
-plot_result(iterations)
+system.time(plot_result(iterations))
+
+
+
 
 
 
