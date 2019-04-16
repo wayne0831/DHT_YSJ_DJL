@@ -387,13 +387,13 @@ kfold_basic <- function(tt){
     
     temp_bm         <- as.data.frame(predict(model_bm, testset))
     
-    # ?삁痢↔컪?쓣 ?삁痢? ?뜲?씠?꽣 ?봽?젅?엫?쓽 ?걹?뿉 異붽?.
+   # append this iteration's prediction to the end of the prediction data frame
     prediction_bm   <- rbind(prediction_bm, temp_bm)
     
-    # ?떎?젣媛?(testset) testsetCopy?뿉 異붽?.
+    # append this iteration's test set to the testset copy data frame
     testset_copy_bm <- rbind(testset_copy_bm, as.data.frame(testset[, dependent]))
     
-    # ?삁痢↔컪怨? ?떎?젣媛? ?뜲?씠?꽣?봽?젅?엫.
+   
     # add predictions and actual Sepal Length values
     result_bm            <- cbind(prediction_bm, testset_copy_bm[, 1])
     
@@ -442,13 +442,12 @@ kfold_heu <- function(tt){
     
     temp_hm         <- as.data.frame(predict(model_hm, testset))
     
-    # ?삁痢↔컪?쓣 ?삁痢? ?뜲?씠?꽣 ?봽?젅?엫?쓽 ?걹?뿉 異붽?.
+    # append this iteration's prediction to the end of the prediction data frame
     prediction_hm   <- rbind(prediction_hm, temp_hm)
     
-    # ?떎?젣媛?(testset) testsetCopy?뿉 異붽?.
+     # append this iteration's test set to the testset copy data frame
     testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
     
-    # ?삁痢↔컪怨? ?떎?젣媛? ?뜲?씠?꽣?봽?젅?엫.
     # add predictions and actual Sepal Length values
     result_hm            <- cbind(prediction_hm, testset_copy_hm[, 1])
     
