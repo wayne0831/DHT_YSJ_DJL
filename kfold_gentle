@@ -1,0 +1,76 @@
+install.packages("rpart")
+library(ada)
+library(rpart)
+
+setwd("C:\\Users\\jeon\\Desktop\\Dataset")
+
+data <- read.csv("banknote_authentication.csv", TRUE)
+
+
+kfold_gentle <- function(tt){
+  # number of cross validation
+  k       <- 5
+  
+  # fix the seed so that each model train and test the same data
+  set.seed(1) 
+  
+  # each data has its own id(1 to 5) to process k fold cross validation 
+  data$id <- sample(1:k, nrow(data), replace = TRUE)
+  
+  list    <- 1:k
+  
+  # data frame reset
+  prediction_gentle <- testset_copy_gentle <- data.frame()
+  
+  #function for k fold
+  for(i in 1:k){
+    
+    # remove rows with id i from dataframe to create training set
+    # select rows with id i to create test set
+    trainset     <- subset(data, id %in% list[-i])
+    testset      <- subset(data, id %in% c(i))
+    
+    #run a adaboost model
+    #model_lotit        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
+    
+    model_gentle        <- ada(trainset[, 1:4], trainset[, 5], loss = "exponential",
+                               type = "gentle", iter = tt)
+    
+    #temp_gentle         <- as.data.frame(predict(model_bm, testset))
+    temp_gentle         <- as.data.frame(predict(model_gentle, testset))
+    
+    # append this iteration's prediction to the end of the prediction data frame
+    prediction_gentle   <- rbind(prediction_gentle, temp_gentle)
+    
+    # append this iteration's test set to the testset copy data frame
+    testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, 5]))
+    
+    # add predictions and actual Sepal Length values
+    result_gentle            <- cbind(prediction_gentle, testset_copy_gentle[, 1])
+    
+    names(result_gentle)     <- c("Actual", "Predicted")
+    
+    confusion_matrix_gentle  <- table(result_gentle$Actual, result_gentle$Predicted )
+    
+    accuracy_gentle          <- sum(diag(confusion_matrix_gentle)) / sum(confusion_matrix_gentle)
+    
+    result_gentle           <- list("confusion_matrix_gentle " = confusion_matrix_gentle, 
+                                    "accuracy_gentle"          = accuracy_gentle)
+    
+  }  
+  
+  temp1 <<- (result_gentle$accuracy_gentle)
+  
+  return(temp1)
+}
+
+tt<- list()
+
+for (i in 1:100){
+  print(kfold_gentle(i))
+  tt <<- append(tt, kfold_gentle(i), after = length(tt))
+  
+}
+
+
+print(mean(unlist(tt)))
