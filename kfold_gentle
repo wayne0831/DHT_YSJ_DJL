@@ -1,18 +1,34 @@
 install.packages("rpart")
+install.packages("ada")
 library(ada)
 library(rpart)
 
-setwd("C:\\Users\\jeon\\Desktop\\Dataset")
+# set work directory
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 
-data <- read.csv("banknote_authentication.csv", TRUE)
+# load the dataset
+data          <- read.csv('spambase.csv', TRUE)
 
+# heuristic parameter which controls the value of alpha
+k             <<- 2
+
+# seed
+s             <- 3
+
+# feature location of idependent and dependent variables
+independent   <- 1:57
+dependent     <- 58
+
+# divide the dataset into input features and output feature
+X             <- data[, independent]
+y             <- data[, dependent]
 
 kfold_gentle <- function(tt){
   # number of cross validation
   k       <- 5
   
   # fix the seed so that each model train and test the same data
-  set.seed(1) 
+  set.seed(s) 
   
   # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
@@ -33,7 +49,7 @@ kfold_gentle <- function(tt){
     #run a adaboost model
     #model_lotit        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
     
-    model_gentle        <- ada(trainset[, 1:4], trainset[, 5], loss = "exponential",
+    model_gentle        <- ada(trainset[, independent], trainset[, dependent], loss = "exponential",
                                type = "gentle", iter = tt)
     
     #temp_gentle         <- as.data.frame(predict(model_bm, testset))
@@ -43,7 +59,7 @@ kfold_gentle <- function(tt){
     prediction_gentle   <- rbind(prediction_gentle, temp_gentle)
     
     # append this iteration's test set to the testset copy data frame
-    testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, 5]))
+    testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, dependent]))
     
     # add predictions and actual Sepal Length values
     result_gentle            <- cbind(prediction_gentle, testset_copy_gentle[, 1])
