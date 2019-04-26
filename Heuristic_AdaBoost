@@ -19,14 +19,17 @@ sapply(pkgs, require, character.only = TRUE)
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 
 # load the dataset
-data          <- read.csv('transfusion.csv', TRUE)
+data          <- read.csv('spambase.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
-k             <<- 2.6
+k             <<- 2
+
+# seed
+s             <- 3
 
 # feature location of idependent and dependent variables
-independent   <- 1:4
-dependent     <- 5
+independent   <- 1:57
+dependent     <- 58
 
 # number of iterations of the model
 iterations    <- 100
@@ -364,7 +367,7 @@ kfold_basic <- function(tt){
   k       <- 5
   
   # fix the seed so that each model train and test the same data
-  set.seed(1) 
+  set.seed(3) 
   
   # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
@@ -387,13 +390,13 @@ kfold_basic <- function(tt){
     
     temp_bm         <- as.data.frame(predict(model_bm, testset))
     
-   # append this iteration's prediction to the end of the prediction data frame
+    # append this iteration's prediction to the end of the prediction data frame
     prediction_bm   <- rbind(prediction_bm, temp_bm)
     
     # append this iteration's test set to the testset copy data frame
     testset_copy_bm <- rbind(testset_copy_bm, as.data.frame(testset[, dependent]))
     
-   
+    
     # add predictions and actual Sepal Length values
     result_bm            <- cbind(prediction_bm, testset_copy_bm[, 1])
     
@@ -420,7 +423,7 @@ kfold_heu <- function(tt){
   k       <- 5
   
   # fix the seed so that each model train and test the same data
-  set.seed(1) 
+  set.seed(3) 
   
   # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
@@ -445,7 +448,7 @@ kfold_heu <- function(tt){
     # append this iteration's prediction to the end of the prediction data frame
     prediction_hm   <- rbind(prediction_hm, temp_hm)
     
-     # append this iteration's test set to the testset copy data frame
+    # append this iteration's test set to the testset copy data frame
     testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
     
     # add predictions and actual Sepal Length values
@@ -602,8 +605,6 @@ plot_result <- function(qwe){
 
 
 system.time(plot_result(iterations))
-
-
 
 
 
