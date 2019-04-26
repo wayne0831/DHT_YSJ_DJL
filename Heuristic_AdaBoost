@@ -367,7 +367,7 @@ kfold_basic <- function(tt){
   k       <- 5
   
   # fix the seed so that each model train and test the same data
-  set.seed(3) 
+  set.seed(s) 
   
   # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
@@ -423,7 +423,7 @@ kfold_heu <- function(tt){
   k       <- 5
   
   # fix the seed so that each model train and test the same data
-  set.seed(3) 
+  set.seed(s) 
   
   # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
