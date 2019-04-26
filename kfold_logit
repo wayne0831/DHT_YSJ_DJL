@@ -1,14 +1,32 @@
 install.packages("caTools")
 library(caTools)
 
-data  <- read.csv("breast-cancer-wisconsin(diagnostic).csv", TRUE)
+# set work directory
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
+
+# load the dataset
+data          <- read.csv('spambase.csv', TRUE)
+
+# heuristic parameter which controls the value of alpha
+k             <<- 2
+
+# seed
+s             <- 3
+
+# feature location of idependent and dependent variables
+independent   <- 1:57
+dependent     <- 58
+
+# divide the dataset into input features and output feature
+X             <- data[, independent]
+y             <- data[, dependent]
 
 kfold_logit <- function(tt){
   # number of cross validation
   k       <- 5
   
   # fix the seed so that each model train and test the same data
-  set.seed(2) 
+  set.seed(s) 
   
   # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
@@ -29,7 +47,7 @@ kfold_logit <- function(tt){
     #run a adaboost model
     #model_lotit        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
     
-    model_logit        <- LogitBoost(trainset[, 1:30], trainset[, 31], nIter = tt)
+    model_logit        <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = tt)
     
     #temp_logit         <- as.data.frame(predict(model_bm, testset))
     temp_logit         <- as.data.frame(predict(model_logit, testset))
@@ -38,7 +56,7 @@ kfold_logit <- function(tt){
     prediction_logit   <- rbind(prediction_logit, temp_logit)
     
     # append this iteration's test set to the testset copy data frame
-    testset_copy_logit <- rbind(testset_copy_logit, as.data.frame(testset[, 31]))
+    testset_copy_logit <- rbind(testset_copy_logit, as.data.frame(testset[, dependent]))
     
     # add predictions and actual Sepal Length values
     result_logit            <- cbind(prediction_logit, testset_copy_logit[, 1])
@@ -61,6 +79,13 @@ kfold_logit <- function(tt){
 
 tt<- list()
 
+for (i in 1:100){
+  print(kfold_logit(i))
+  tt <<- append(tt, kfold_logit(i), after = length(tt))
+  
+}
+
+print(mean(unlist(tt)))
 for (i in 1:100){
   print(kfold_logit(i))
   tt <<- append(tt, kfold_logit(i), after = length(tt))
