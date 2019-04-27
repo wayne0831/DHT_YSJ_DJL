@@ -81,15 +81,15 @@ kfold_heu <- function(tt){
 tt<- list()
 
 for (i in 1:100){
-  print(kfold_logit(i))
-  tt <<- append(tt, kfold_logit(i), after = length(tt))
+  print(kfold_heu(i))
+  tt <<- append(tt, kfold_heu(i), after = length(tt))
   
 }
 
 print(mean(unlist(tt)))
 for (i in 1:100){
-  print(kfold_logit(i))
-  tt <<- append(tt, kfold_logit(i), after = length(tt))
+  print(kfold_heu(i))
+  tt <<- append(tt, kfold_heu(i), after = length(tt))
   
 }
 
