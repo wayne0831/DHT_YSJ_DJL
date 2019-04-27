@@ -74,3 +74,20 @@ kfold_basic <- function(tt){
   
   return(temp1)
 }
+
+tt<- list()
+
+for (i in 1:100){
+  print(kfold_basic(i))
+  tt <<- append(tt, kfold_basic(i), after = length(tt))
+  
+}
+
+print(mean(unlist(tt)))
+for (i in 1:100){
+  print(kfold_basic(i))
+  tt <<- append(tt, kfold_basic(i), after = length(tt))
+  
+}
+
+print(mean(unlist(tt)))
