@@ -1,3 +1,23 @@
+# set work directory
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
+
+# load the dataset
+data          <- read.csv('spambase.csv', TRUE)
+
+# heuristic parameter which controls the value of alpha
+k             <<- 2
+
+# seed
+s             <- 3
+
+# feature location of idependent and dependent variables
+independent   <- 1:57
+dependent     <- 58
+
+# divide the dataset into input features and output feature
+X             <- data[, independent]
+y             <- data[, dependent]
+
 # basic adaboost k-fold cross validation
 # tt : number of rounds
 kfold_basic <- function(tt){
