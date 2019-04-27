@@ -1,0 +1,96 @@
+install.packages("caTools")
+library(caTools)
+
+# set work directory
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
+
+# load the dataset
+data          <- read.csv('spambase.csv', TRUE)
+
+# heuristic parameter which controls the value of alpha
+k             <<- 2
+
+# seed
+s             <- 3
+
+# feature location of idependent and dependent variables
+independent   <- 1:57
+dependent     <- 58
+
+# divide the dataset into input features and output feature
+X             <- data[, independent]
+y             <- data[, dependent]
+
+# heuristic adaboost k-fold cross validation
+# tt : number of rounds
+kfold_heu <- function(tt){
+  # number of cross validation
+  k       <- 5
+  
+  # fix the seed so that each model train and test the same data
+  set.seed(s) 
+  
+  # each data has its own id(1 to 5) to process k fold cross validation 
+  data$id <- sample(1:k, nrow(data), replace = TRUE)
+  
+  list    <- 1:k
+  
+  # data frame reset
+  prediction_hm <- testset_copy_hm <- data.frame()
+  
+  #function for k fold
+  for(i in 1:k){
+    # remove rows with id i from dataframe to create training set
+    trainset     <- subset(data, id %in% list[-i])
+    
+    # select rows with id i to create test set
+    testset      <- subset(data, id %in% c(i))
+    
+    #run a adaboost model
+    model_hm        <- heuristic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)  
+    
+    temp_hm         <- as.data.frame(predict(model_hm, testset))
+    
+    # append this iteration's prediction to the end of the prediction data frame
+    prediction_hm   <- rbind(prediction_hm, temp_hm)
+    
+    # append this iteration's test set to the testset copy data frame
+    testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
+    
+    # add predictions and actual Sepal Length values
+    result_hm            <- cbind(prediction_hm, testset_copy_hm[, 1])
+    
+    names(result_hm)     <- c("Actual", "Predicted")
+    
+    confusion_matrix_hm  <- table(result_hm$Actual, result_hm$Predicted )
+    
+    accuracy_hm          <- sum(diag(confusion_matrix_hm)) / sum(confusion_matrix_hm)
+    
+    result_hm            <- list("confusion_matrix_hm " = confusion_matrix_hm, 
+                                 "accuracy_hm"          = accuracy_hm)
+    
+  }  
+  
+  temp2 <<- (result_hm$accuracy_hm)
+  
+  return (temp2)
+  
+}
+
+
+tt<- list()
+
+for (i in 1:100){
+  print(kfold_logit(i))
+  tt <<- append(tt, kfold_logit(i), after = length(tt))
+  
+}
+
+print(mean(unlist(tt)))
+for (i in 1:100){
+  print(kfold_logit(i))
+  tt <<- append(tt, kfold_logit(i), after = length(tt))
+  
+}
+
+print(mean(unlist(tt)))
