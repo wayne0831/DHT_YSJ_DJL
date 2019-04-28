@@ -1,6 +1,6 @@
 pkgs <- c("rpart", "raprt.plot", "crayon")
 
-sapply(pkgs, install.packages, character.only = TRUE)
+#sapply(pkgs, install.packages, character.only = TRUE)
 
 sapply(pkgs, require, character.only = TRUE)
 
@@ -16,10 +16,10 @@ sapply(pkgs, require, character.only = TRUE)
 
 ####################################################################################################
 # set work directory
-setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
+setwd("C:\\Users\\Administrator\\Desktop\\Dataset")
 
 # load the dataset
-data          <- read.csv('spambase.csv', TRUE)
+data          <- read.csv('sonar.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
 k             <<- 2
@@ -28,8 +28,8 @@ k             <<- 2
 s             <- 3
 
 # feature location of idependent and dependent variables
-independent   <- 1:57
-dependent     <- 58
+independent   <- 1:60
+dependent     <- 62
 
 # number of iterations of the model
 iterations    <- 100
@@ -605,6 +605,7 @@ plot_result <- function(qwe){
 
 
 system.time(plot_result(iterations))
+
 
 
 
