@@ -90,10 +90,4 @@ for (i in 1:100){
 }
 
 print(mean(unlist(tt)))
-for (i in 1:100){
-  print(kfold_heu(i))
-  tt <<- append(tt, kfold_heu(i), after = length(tt))
-  
-}
 
-print(mean(unlist(tt)))
