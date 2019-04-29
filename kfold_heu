@@ -1,5 +1,8 @@
-install.packages("caTools")
-library(caTools)
+pkgs <- c("rpart", "raprt.plot", "crayon")
+
+#sapply(pkgs, install.packages, character.only = TRUE)
+
+sapply(pkgs, require, character.only = TRUE)
 
 # set work directory
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
