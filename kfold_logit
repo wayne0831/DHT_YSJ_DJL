@@ -7,9 +7,6 @@ setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 # load the dataset
 data          <- read.csv('spambase.csv', TRUE)
 
-# heuristic parameter which controls the value of alpha
-k             <<- 2
-
 # seed
 s             <- 3
 
