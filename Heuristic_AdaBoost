@@ -1,4 +1,4 @@
-pkgs <- c("rpart", "raprt.plot", "crayon")
+pkgs <- c("rpart",  "crayon")
 
 #sapply(pkgs, install.packages, character.only = TRUE)
 
