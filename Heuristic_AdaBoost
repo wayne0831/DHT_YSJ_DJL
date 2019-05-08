@@ -16,7 +16,7 @@ sapply(pkgs, require, character.only = TRUE)
 
 ####################################################################################################
 # set work directory
-setwd("C:\\Users\\Administrator\\Desktop\\Dataset")
+setwd("C:/Users/Wayne/Documents/R/FlexBoost_DHY/Dataset")
 
 # load the dataset
 data          <- read.csv('sonar.csv', TRUE)
@@ -605,8 +605,6 @@ plot_result <- function(qwe){
 
 
 system.time(plot_result(iterations))
-
-
 
 
 
