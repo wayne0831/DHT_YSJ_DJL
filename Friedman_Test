@@ -1,0 +1,360 @@
+pkgs <- c("PairedData", "gplots", "car", "tidyr", "reshape", "coin")
+
+sapply(pkgs, install.packages, character.only = TRUE)
+
+sapply(pkgs, require, character.only = TRUE)
+
+friedman.test.with.post.hoc <- function(formu, data, to.print.friedman = T, to.post.hoc.if.signif = T,  to.plot.parallel = T, to.plot.boxplot = T, signif.P = .05, color.blocks.in.cor.plot = T, jitter.Y.in.cor.plot =F)
+{
+  # formu is a formula of the shape: 	Y ~ X | block
+  # data is a long data.frame with three columns:    [[ Y (numeric), X (factor), block (factor) ]]
+  
+  # Note: This function doesn't handle NA's! In case of NA in Y in one of the blocks, then that entire block should be removed.
+  
+  
+  # Loading needed packages
+  if(!require(coin))
+  {
+    print("You are missing the package 'coin', we will now try to install it...")
+    install.packages("coin")
+    library(coin)
+  }
+  
+  if(!require(multcomp))
+  {
+    print("You are missing the package 'multcomp', we will now try to install it...")
+    install.packages("multcomp")
+    library(multcomp)
+  }
+  
+  if(!require(colorspace))
+  {
+    print("You are missing the package 'colorspace', we will now try to install it...")
+    install.packages("colorspace")
+    library(colorspace)
+  }
+  
+  
+  # get the names out of the formula
+  formu.names <- all.vars(formu)
+  Y.name <- formu.names[1]
+  X.name <- formu.names[2]
+  block.name <- formu.names[3]
+  
+  if(dim(data)[2] >3) data <- data[,c(Y.name,X.name,block.name)]	# In case we have a "data" data frame with more then the three columns we need. This code will clean it from them...
+  
+  # Note: the function doesn't handle NA's. In case of NA in one of the block T outcomes, that entire block should be removed.
+  
+  # stopping in case there is NA in the Y vector
+  if(sum(is.na(data[,Y.name])) > 0) stop("Function stopped: This function doesn't handle NA's. In case of NA in Y in one of the blocks, then that entire block should be removed.")
+  
+  # make sure that the number of factors goes with the actual values present in the data:
+  data[,X.name ] <- factor(data[,X.name ])
+  data[,block.name ] <- factor(data[,block.name ])
+  number.of.X.levels <- length(levels(data[,X.name ]))
+  if(number.of.X.levels == 2) { warning(paste("'",X.name,"'", "has only two levels. Consider using paired wilcox.test instead of friedman test"))}
+  
+  # making the object that will hold the friedman test and the other.
+  the.sym.test <- symmetry_test(formu, data = data,	### all pairwise comparisons
+                                teststat = "max",
+                                xtrafo = function(Y.data) { trafo( Y.data, factor_trafo = function(x) { model.matrix(~ x - 1) %*% t(contrMat(table(x), "Tukey")) } ) },
+                                ytrafo = function(Y.data){ trafo(Y.data, numeric_trafo = rank, block = data[,block.name] ) }
+  )
+  # if(to.print.friedman) { print(the.sym.test) }
+  
+  
+  if(to.post.hoc.if.signif)
+  {
+    if(pvalue(the.sym.test) < signif.P)
+    {
+      # the post hoc test
+      The.post.hoc.P.values <- pvalue(the.sym.test, method = "single-step")	# this is the post hoc of the friedman test
+      
+      
+      # plotting
+      if(to.plot.parallel & to.plot.boxplot)	par(mfrow = c(1,2)) # if we are plotting two plots, let's make sure we'll be able to see both
+      
+      if(to.plot.parallel)
+      {
+        X.names <- levels(data[, X.name])
+        X.for.plot <- seq_along(X.names)
+        plot.xlim <- c(.7 , length(X.for.plot)+.3)	# adding some spacing from both sides of the plot
+        
+        if(color.blocks.in.cor.plot)
+        {
+          blocks.col <- rainbow_hcl(length(levels(data[,block.name])))
+        } else {
+          blocks.col <- 1 # black
+        }
+        
+        data2 <- data
+        if(jitter.Y.in.cor.plot) {
+          data2[,Y.name] <- jitter(data2[,Y.name])
+          par.cor.plot.text <- "Parallel coordinates plot (with Jitter)"
+        } else {
+          par.cor.plot.text <- "Parallel coordinates plot"
+        }
+        
+        # adding a Parallel coordinates plot
+        matplot(as.matrix(reshape(data2,  idvar=X.name, timevar=block.name,
+                                  direction="wide")[,-1])  ,
+                type = "l",  lty = 1, axes = FALSE, ylab = Y.name,
+                xlim = plot.xlim,
+                col = blocks.col,
+                main = par.cor.plot.text)
+        axis(1, at = X.for.plot , labels = X.names) # plot X axis
+        axis(2) # plot Y axis
+        points(tapply(data[,Y.name], data[,X.name], median) ~ X.for.plot, col = "red",pch = 4, cex = 2, lwd = 5)
+      }
+      
+      if(to.plot.boxplot)
+      {
+        # first we create a function to create a new Y, by substracting different combinations of X levels from each other.
+        subtract.a.from.b <- function(a.b , the.data)
+        {
+          the.data[,a.b[2]] - the.data[,a.b[1]]
+        }
+        
+        temp.wide <- reshape(data,  idvar=X.name, timevar=block.name,
+                             direction="wide") 	#[,-1]
+        wide.data <- as.matrix(t(temp.wide[,-1]))
+        colnames(wide.data) <- temp.wide[,1]
+        
+        Y.b.minus.a.combos <- apply(with(data,combn(levels(data[,X.name]), 2)), 2, subtract.a.from.b, the.data =wide.data)
+        names.b.minus.a.combos <- apply(with(data,combn(levels(data[,X.name]), 2)), 2, function(a.b) {paste(a.b[2],a.b[1],sep=" - ")})
+        
+        the.ylim <- range(Y.b.minus.a.combos)
+        the.ylim[2] <- the.ylim[2] + max(sd(Y.b.minus.a.combos))	# adding some space for the labels
+        is.signif.color <- ifelse(The.post.hoc.P.values < .05 , "green", "grey")
+        
+        boxplot(Y.b.minus.a.combos,
+                names = names.b.minus.a.combos ,
+                col = is.signif.color,
+                main = "Boxplots (of the differences)",
+                ylim = the.ylim
+        )
+        legend("topright", legend = paste(names.b.minus.a.combos, rep(" ; PostHoc P.value:", number.of.X.levels),round(The.post.hoc.P.values,5)) , fill =  is.signif.color )
+        abline(h = 0, col = "blue")
+        
+      }
+      
+      list.to.return <- list(Friedman.Test = the.sym.test, PostHoc.Test = The.post.hoc.P.values)
+      if(to.print.friedman) {print(list.to.return)}
+      return(list.to.return)
+      
+    }	else {
+      print("The results where not significant, There is no need for a post hoc test")
+      return(the.sym.test)
+    }
+  }
+  
+  # Original credit (for linking online, to the package that performs the post hoc test) goes to "David Winsemius", see:
+  # http://tolstoy.newcastle.edu.au/R/e8/help/09/10/1416.html
+}
+
+#####Friedman Test example####
+RoundingTimes <-
+  matrix(c(5.40, 5.50, 5.55,
+           5.85, 5.70, 5.75,
+           5.20, 5.60, 5.50,
+           5.55, 5.50, 5.40,
+           5.90, 5.85, 5.70,
+           5.45, 5.55, 5.60,
+           5.40, 5.40, 5.35,
+           5.45, 5.50, 5.35,
+           5.25, 5.15, 5.00,
+           5.85, 5.80, 5.70,
+           5.25, 5.20, 5.10,
+           5.65, 5.55, 5.45,
+           5.60, 5.35, 5.45,
+           5.05, 5.00, 4.95,
+           5.50, 5.50, 5.40,
+           5.45, 5.55, 5.50,
+           5.55, 5.55, 5.35,
+           5.45, 5.50, 5.55,
+           5.50, 5.45, 5.25,
+           5.65, 5.60, 5.40,
+           5.70, 5.65, 5.55,
+           6.30, 6.30, 6.25),
+         nrow = 22,
+         byrow = TRUE,
+         dimnames = list(1 : 22,
+                         c("Round Out", "Narrow Angle", "Wide Angle")))
+
+
+
+RT2 <- melt(RoundingTimes)
+
+out <- aov(value~X2, data = RT2)
+
+shapiro.test(resid(out)) # p-value = 0.001112 : 정규분포 따르지 않음
+
+boxplot(value ~ X2, data = RT2)
+
+friedman.test(RoundingTimes) # p-value = 0.003805 : 차이가 있다
+friedman.test.with.post.hoc(value ~ X2 | X1, RT2)
+
+#####Friedman Test seed####
+TestBoost <-
+  matrix(
+  c(0.9143589744,	0.9034037	, 0.930626899,	0.9289173789,
+    0.9583016105,	0.9618993	, 0.9683016	,0.9614348463,
+    0.7213398693,	0.7187218	, 0.7273856	,0.7820261438,
+    0.7813235294,	0.80411	  , 0.7797861	,0.7860962567,
+    0.7588802083,	0.7653451	, 0.7648698	,0.7759635417,
+    0.8915897436,	0.9064738	, 0.825641	,0.9170769231,
+    0.9211519235,	0.9362768	, 0.9470441	,0.9230145621,
+    0.6744158076,	0.6942541	, 0.6649485	,0.6893298969,
+    0.5934965035,	0.5259703	, 0.6165035	,0.6486013986,
+    0.6972413793,	0.7105617	, 0.7518103	,0.7535344828,
+    0.6347866745,	0.6653919	, 0.6555348	,0.6645061368,
+    0.8321452145,	0.8185033	, 0.8232673	,0.859669967,
+    0.8406763285,	0.8137803	, 0.8177778	,0.8654589372,
+    0.8133870968,	0.815752	, 0.8155161	,0.8418387097,
+    0.9650615114,	0.9710511	, 0.9616344	,0.9708084359,
+    0.9654494382,	0.9684969	, 0.9780337	,0.9847752809,
+    0.9579775281,	0.9651565	, 0.9573034	,0.9774719101,
+    0.9798876404,	0.9887672	, 0.9767978	,0.9907865169,
+    0.9304666667,	0.920842	, 0.9404	  ,0.955,
+    0.9336	    , 0.9330169	, 0.9373333	,0.9454666667,
+    0.8658291457,	0.9015782	, 0.9067092	,0.9013520408,
+    0.8431407035,	0.8696063	, 0.8635714	,0.8700255102,
+    0.8619849246,	0.8892161	, 0.8871684	,0.8916581633,
+    0.9236190476,	0.9368082	, 0.9244286	,0.9428095238,
+    0.9716666667,	0.9781333	, 0.9793333	,0.9799047619,
+    0.9460952381,	0.9483168	, 0.951619	,0.9593809524,
+    0.7104480652,	0.7118326	, 0.7231432	,0.7182416836,
+    0.7699796334,	0.7910173	, 0.7778004	,0.779796334,
+    0.6649626612,	0.7081787	, 0.675628	,0.6729599457 , 
+    0.9019373219,	0.8979074, 	0.9280912, 	0.9217663818,
+    0.9583601757,	0.9636043, 	0.9683748, 	0.9673352855,
+    0.7280718954,	0.7359126, 	0.7446732, 	0.7483006536,
+    0.7844786096,	0.8237772, 	0.7775535, 	0.7867647059,
+    0.7506119792,	0.7536463, 	0.7522396, 	0.7706640625,
+    0.8957435897,	0.9140147, 	0.8985641, 	0.9303076923,
+    0.9213388394,	0.9366734, 	0.9468876, 	0.9218278635,
+    0.6792955326,	0.654514, 	0.6980584, 	0.6893298969,
+    0.5972727273,	0.5955299, 	0.6342657, 	0.674965035,
+    0.7317241379,	0.7095699, 	0.7097414, 	0.7944827586,
+    0.6339041496,	0.6758041, 	0.6596376, 	0.6623085915,
+    0.8194389439,	0.8070307, 	0.829901, 	0.8382178218,
+    0.8114009662,	0.8409014, 	0.8190821, 	0.8359903382,
+    0.7929032258,	0.8081965, 	0.8125806, 	0.8153225806,
+    0.9667311072,	0.9693231, 	0.9634622, 	0.9705448155,
+    0.9573595506,	0.957976, 	0.9641011, 	0.963988764,
+    0.9756179775,	0.9811909, 	0.9633708, 	0.9866853933,
+    0.9815168539,	0.9865053, 	0.9734831, 	0.9934269663,
+    0.9381333333,	0.934755, 	0.9443333, 	0.9552666667,
+    0.9317333333,	0.9336705, 	0.9419333, 	0.9527333333,
+    0.8741071429,	0.8986759, 	0.8856378, 	0.8988010204,
+    0.8402806122,	0.8714733, 	0.8499497, 	0.8602040816,
+    0.8669387755,	0.8929714, 	0.8848214, 	0.879005102,
+    0.9217619048,	0.9353308, 	0.9239048, 	0.9330952381,
+    0.966047619	, 0.9644778, 	0.975381, 	0.9804761905,
+    0.9578095238,	0.958179, 	0.9581905, 	0.9714285714,
+    0.7095790903,	0.6965883, 	0.7269857, 	0.7195179905,
+    0.7728377461,	0.7920586, 	0.779294, 	0.7811541073,
+    0.6696334012,	0.7049778, 	0.6774881, 	0.6754514596,
+    0.9133333333,	0.903747, 	0.9306553,	0.9266381766,
+    0.9569106881,	0.9605217, 	0.9698097,	0.9665300146,
+    0.7354575163,	0.711112, 	0.7166013,	0.7560784314,
+    0.7811363636,	0.8253818, 	0.7734225,	0.7913101604,
+    0.7580729167,	0.7535421, 	0.7589193,	0.7645442708,
+    0.8954358974,	0.9060019, 	0.8860513,	0.9178461538,
+    0.9220582482,	0.939715, 	0.9483221,	0.9220582482,
+    0.6812542955,	0.7049466, 	0.6963058,	0.6991237113,
+    0.5778321678,	0.5362197, 	0.5946154,	0.6591608392,
+    0.715862069	, 0.6847071, 	0.7414655,	0.7918965517,
+    0.636113384	, 0.6805674, 	0.6645061,	0.6653477499,
+    0.8208250825,	0.8110477, 	0.8177558,	0.8614851485,
+    0.8011111111,	0.8149759, 	0.8104831,	0.8416425121,
+    0.7984193548,	0.8153261, 	0.8285484,	0.8376129032,
+    0.9660984183,	0.9671153, 	0.9667663,	0.9713884007,
+    0.9723033708,	0.9634208, 	0.9708989,	0.9823033708,
+    0.9691573034,	0.9721696, 	0.9605618,	0.9859550562,
+    0.9842696629,	0.9853192, 	0.9676404,	0.9939325843,
+    0.9382666667,	0.9211233, 	0.9453333,	0.956,
+    0.9333333333,	0.9421755, 	0.9399333,	0.9532666667,
+    0.8745153061,	0.9001237, 	0.8916582,	0.8976530612,
+    0.8456887755,	0.8717894, 	0.8666071,	0.8601530612,
+    0.8650255102,	0.8968738, 	0.8727806,	0.8928571429,
+    0.9281428571,	0.9397952, 	0.9228571,	0.945952381,
+    0.9795714286,	0.9756149, 	0.9807143,	0.9857142857,
+    0.9382380952,	0.9482488, 	0.9502381,	0.961952381,
+    0.7159809912,	0.7216364, 	0.7214732,	0.7227494908,
+    0.76532926	, 0.7906041, 	0.7821317,	0.7780855397,
+    0.6679429735,	0.697416, 	0.6827291,	0.6763068568,
+    0.9213390313, 	0.8956658, 	0.9330199, 	0.9319373219,
+    0.9527086384, 	0.9552583, 	0.9664275, 	0.9666325037,
+    0.7346078431, 	0.7346547, 	0.7239542, 	0.7624509804,
+    0.7821791444, 	0.8034263, 	0.7852941, 	0.7939304813,
+    0.75625	    ,   0.7533142, 	0.7638281, 	0.7755989583,
+    0.902	      ,   0.9094313, 	0.8978462, 	0.9174871795,
+    0.9215127146, 	0.9368204, 	0.9470441, 	0.9216648555,
+    0.6629209622, 	0.7110826, 	0.7050172, 	0.6956701031,
+    0.6025874126, 	0.564832, 	0.6062238, 	0.662027972,
+    0.7068103448, 	0.7241756, 	0.7305172, 	0.8225,
+    0.6411922852, 	0.6620108, 	0.6633957, 	0.6612974868,
+    0.7997689769, 	0.7976521, 	0.8172607, 	0.8371947195,
+    0.7912560386, 	0.831562, 	0.7976329, 	0.8348792271,
+    0.8094193548, 	0.8238539, 	0.8315161, 	0.8249354839,
+    0.9618629174, 	0.9708599, 	0.9618278, 	0.9771528998,
+    0.9626966292, 	0.9629645, 	0.9711236, 	0.9831460674,
+    0.9757865169, 	0.9730814, 	0.9615169, 	0.9833146067,
+    0.9752247191, 	0.9764785, 	0.9678652, 	0.9863483146,
+    0.9346	    ,   0.9358586, 	0.9464	 ,  0.949,
+    0.9455333333, 	0.9434024, 	0.9474667, 	0.9572,
+    0.8720918367, 	0.8911762, 	0.8796684, 	0.8930102041,
+    0.8564540816, 	0.8710536, 	0.8632398, 	0.8724234694,
+    0.8777295918, 	0.8991751, 	0.8862755, 	0.8867602041,
+    0.9177142857, 	0.9219611, 	0.9270476, 	0.940047619,
+    0.9709047619, 	0.9754087, 	0.9781905, 	0.9769047619,
+    0.9522857143, 	0.9510668, 	0.9537143, 	0.9668571429,
+    0.7129327902, 	0.7220989, 	0.7253564, 	0.7236184657,
+    0.7662729124, 	0.7905089, 	0.7825933, 	0.7791989138,
+    0.6684996606, 	0.6906362, 	0.6748676, 	0.67598778,
+    0.9117948718, 	0.8915536, 	0.9250997, 	0.9256125356,
+    0.9581991215, 	0.9573751, 	0.9668668, 	0.9668374817,
+    0.7266013072, 	0.7221654, 	0.7231699, 	0.7535294118,
+    0.7923930481, 	0.8113045, 	0.7734091, 	0.7953609626,
+    0.7462760417, 	0.7437587, 	0.7551823, 	0.773203125,
+    0.8798974359, 	0.9026349, 	0.8850769, 	0.9106153846,
+    0.9206781135, 	0.939731, 	0.9472658, 	0.9211084547,
+    0.6741065292, 	0.7038011, 	0.6999313, 	0.682233677,
+    0.5659440559, 	0.5920821, 	0.6181119, 	0.6846153846,
+    0.6434482759, 	0.6727661, 	0.6762069, 	0.7375,
+    0.6334015196, 	0.6852973, 	0.6608884, 	0.6655815313,
+    0.816369637	,   0.8024168, 	0.830066, 	0.8514851485,
+    0.816369637	,   0.8025661, 	0.8089855, 	0.837294686,
+    0.8055483871, 	0.8234804, 	0.8251613, 	0.8467419355,
+    0.9591915641, 	0.9632207, 	0.9591916, 	0.9688927944,
+    0.9734269663, 	0.9725713, 	0.9746067, 	0.9834269663,
+    0.9652247191, 	0.9744427, 	0.9533146, 	0.9845505618,
+    0.977752809	,   0.9800961, 	0.9738764, 	0.9896067416,
+    0.9378666667, 	0.9414551, 	0.9529333, 	0.9558666667,
+    0.947	      ,   0.9420958, 	0.9549333, 	0.9557333333,
+    0.8820153061, 	0.9082457, 	0.8957653, 	0.9024744898,
+    0.8555612245, 	0.8793766, 	0.872551, 	0.8625,
+    0.8773469388, 	0.9030708, 	0.8845918, 	0.888877551,
+    0.9028571429, 	0.9219109, 	0.9025714, 	0.9288095238,
+    0.9683809524, 	0.966292, 	0.9690952, 	0.9796190476,
+    0.928952381	,   0.9382536, 	0.9377619, 	0.9728571429,
+    0.7098642227, 	0.7068928, 	0.7172641, 	0.7190088255,
+    0.7684928717, 	0.7892613, 	0.78222	 ,  0.7777528853,
+    0.6621520706, 	0.6952299, 	0.6706178, 	0.6710794297),
+    nrow = 145, 
+    byrow = TRUE,
+    dimnames = list(1:145, 
+                    c("AdaBoost", "LogitBoost", 
+                      "GentleBoost","FlexBoost")))
+
+RT <- melt(TestBoost)
+
+out <- aov(value~X2, data = RT)
+
+shapiro.test(resid(out)) #  p-value < 2.2e-16 : 정규분포 따르지 않음
+
+boxplot(value ~ X2, data = RT)
+
+friedman.test(TestBoost) # p-value < 2.2e-16 : 차이가 있다
+friedman.test.with.post.hoc(value ~ X2 | X1, RT)
