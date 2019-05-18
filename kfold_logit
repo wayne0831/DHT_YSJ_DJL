@@ -14,10 +14,6 @@ s             <- 3
 independent   <- 1:57
 dependent     <- 58
 
-# divide the dataset into input features and output feature
-X             <- data[, independent]
-y             <- data[, dependent]
-
 kfold_logit <- function(tt){
   # number of cross validation
   k       <- 5
@@ -41,12 +37,8 @@ kfold_logit <- function(tt){
     trainset     <- subset(data, id %in% list[-i])
     testset      <- subset(data, id %in% c(i))
     
-    #run a adaboost model
-    #model_lotit        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
-    
     model_logit        <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = tt)
     
-    #temp_logit         <- as.data.frame(predict(model_bm, testset))
     temp_logit         <- as.data.frame(predict(model_logit, testset))
     
     # append this iteration's prediction to the end of the prediction data frame
@@ -77,16 +69,12 @@ kfold_logit <- function(tt){
 tt<- list()
 
 for (i in 1:100){
+
   print(kfold_logit(i))
+  
   tt <<- append(tt, kfold_logit(i), after = length(tt))
   
 }
 
 print(mean(unlist(tt)))
-for (i in 1:100){
-  print(kfold_logit(i))
-  tt <<- append(tt, kfold_logit(i), after = length(tt))
-  
-}
 
-print(mean(unlist(tt)))
