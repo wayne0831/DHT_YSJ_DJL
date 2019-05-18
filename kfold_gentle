@@ -16,10 +16,6 @@ s             <- 3
 independent   <- 1:57
 dependent     <- 58
 
-# divide the dataset into input features and output feature
-X             <- data[, independent]
-y             <- data[, dependent]
-
 kfold_gentle <- function(tt){
   # number of cross validation
   k       <- 5
@@ -43,13 +39,9 @@ kfold_gentle <- function(tt){
     trainset     <- subset(data, id %in% list[-i])
     testset      <- subset(data, id %in% c(i))
     
-    #run a adaboost model
-    #model_lotit        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
-    
     model_gentle        <- ada(trainset[, independent], trainset[, dependent], loss = "exponential",
                                type = "gentle", iter = tt)
     
-    #temp_gentle         <- as.data.frame(predict(model_bm, testset))
     temp_gentle         <- as.data.frame(predict(model_gentle, testset))
     
     # append this iteration's prediction to the end of the prediction data frame
