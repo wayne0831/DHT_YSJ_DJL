@@ -10,23 +10,23 @@ pkgs <- c("rpart", "crayon", "caTools", "ada")
 sapply(pkgs, require, character.only = TRUE)
 
 # set work directory
-setwd()
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
 
 # load the dataset
-data          <- read.csv('cmc.csv', TRUE)
+data          <- read.csv('ilpd.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
-k             <<- 1.1
+k             <<- 1/0.78
 
 # seed
 s             <- 1
-
+set.seed(1)
 # feature location of idependent and dependent variables
 independent   <- 1:9
-dependent     <- 12
+dependent     <- 10
 
 # number of iterations of the model
-iterations    <- 10
+iterations    <- 100
 
 # store the result of each model(heuristic, ada, logit, gentle)
 result_h      <- list()
