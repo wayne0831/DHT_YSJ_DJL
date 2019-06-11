@@ -37,6 +37,7 @@ result_g      <- list()
 # divide the dataset into input features and target
 X             <- data[, independent]
 y             <- data[, dependent]
+
 ####################################################################################################
 # 1. predict function
 ####################################################################################################
@@ -72,7 +73,6 @@ predict.adaboost <- function(object, X, type = c("response", "prob"), n_tree = N
 # base model is decision stump, which splits only once
 basic.adaboost <- function(X, y, n_rounds = 100,
                            control = rpart.control(cp = -1, maxdepth = 1)){
-  
   # count the number of rows
   n      <- nrow(X)
   
@@ -139,3 +139,4 @@ basic.adaboost <- function(X, y, n_rounds = 100,
   
   return(result)
 }
+
