@@ -1,0 +1,141 @@
+####################################################################################################
+# 0. initial setting
+# -1 : k < 1 ; more weight on well classified data
+# 0 : k = 1 ; basic model
+# 1 : k > 1 ; more weight on misclassified data
+####################################################################################################
+# load the library
+pkgs <- c("rpart", "crayon", "caTools", "ada")
+
+sapply(pkgs, require, character.only = TRUE)
+
+# set work directory
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset_Final")
+
+# load the dataset
+data          <- read.csv('Wine.csv', TRUE)
+
+# heuristic parameter which controls the value of alpha
+k             <<- 1/0.78
+
+# seed
+s             <- 1
+set.seed(1)
+# feature location of idependent and dependent variables
+independent   <- 1:13
+dependent     <- 15
+
+# number of iterations of the model
+iterations    <- 100
+
+# store the result of each model(heuristic, ada, logit, gentle)
+result_h      <- list()
+result_b      <- list()
+result_l      <- list()
+result_g      <- list()
+
+# divide the dataset into input features and target
+X             <- data[, independent]
+y             <- data[, dependent]
+####################################################################################################
+# 1. predict function
+####################################################################################################
+
+predict.adaboost <- function(object, X, type = c("response", "prob"), n_tree = NULL){
+  # handle args
+  type <- match.arg(type)
+  
+  if(is.null(n_tree)) { tree_seq <- seq_along(object$alphas) } 
+  
+  else                { tree_seq <- seq(1, n_tree) }
+  
+  # evaluate score function on sample
+  f <- 0
+  
+  for(i in tree_seq){
+    tree       <- object$trees[[i]]
+    tree$terms <- object$terms
+    pred       <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
+    f          <- f + object$alphas[i] * pred
+  }
+  
+  # handle response type
+  if(type == "response")  { sign(f) } 
+  
+  else if(type == "prob") { 1/(1 + exp(-2 * f)) }
+}
+
+####################################################################################################
+# 1. AdaBoost
+####################################################################################################
+
+# base model is decision stump, which splits only once
+basic.adaboost <- function(X, y, n_rounds = 100,
+                           control = rpart.control(cp = -1, maxdepth = 1)){
+  
+  # count the number of rows
+  n      <- nrow(X)
+  
+  # initialize weight on each data, tree and alpha
+  w      <- rep(1/n, n)
+  trees  <- list()
+  alphas <- list()
+  
+  # build weak classifiers
+  for(i in seq(n_rounds)){
+    
+    tree <- rpart::rpart(y ~ .,
+                         data = data.frame(X), weights = w,
+                         method = "class", control = control,
+                         x = FALSE, y = FALSE, model = TRUE)
+    
+    pred <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
+    
+    # calculate the error of each classifiers
+    e    <- sum(w * (pred != y))
+    
+    # if error >= 0.5, flip the result
+    if(e >= 0.5){ e <- 1 - e }
+    
+    # learning rate(weight) of each classifiers
+    alpha <- 1/2 * log((1-e)/e)
+    
+    # update and normalize weight of each data
+    w     <- w * exp(-alpha*pred*y)
+    w     <- w / sum(w)
+    
+    # If classifier's error rate is nearly 0, boosting process ends
+    if(abs(e) < 1e-5){
+      # if first base classifier predicts data perfectly, boosting process ends
+      if(i == 1){
+        # first base classifier's weight should be 1
+        alphas[[i]] <- 1
+        trees[[i]]  <- tree
+        terms       <- tree$terms
+        
+        break
+      }
+      break
+    }
+    
+    # Remove formulas since they waste memory
+    if(i == 1)  { terms       <- tree$terms }
+    
+    else        { tree$terms  <- NULL }
+    
+    alphas[[i]] <- alpha
+    trees[[i]]  <- tree
+  }
+  
+  result        <- list(terms  = terms,
+                        trees  = trees,
+                        alphas = unlist(alphas))
+  
+  class(result) <- "adaboost"
+  
+  # create confusion matrix for in-sample fits
+  y_hat                   <- stats::predict(result, X)
+  result$confusion_matrix <- table(y, y_hat)
+  
+  return(result)
+}
