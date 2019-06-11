@@ -205,3 +205,64 @@ print(mean(unlist(iteration)))
 ####################################################################################################
 # cross validation (logitboost)
 ####################################################################################################
+
+kfold.logit <- function(iteration){
+  # number of cross validation
+  k       <- 5
+  
+  # fix the seed so that result could be reproducible
+  set.seed(s) 
+  
+  # each data has its own id(1 to 5) to process k fold cross validation 
+  data$id <- sample(1:k, nrow(data), replace = TRUE)
+  list    <- 1:k
+  
+  # data frame reset
+  prediction_logit <- testset_copy_logit <- data.frame()
+  
+  #function for k fold
+  for(i in 1:k){
+    # divide the whole dataset into train and testset
+    trainset     <- subset(data, id %in% list[-i])
+    testset      <- subset(data, id %in% c(i))
+    
+    #run a adaboost model
+    model_logit        <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = iteration)
+    temp_logit         <- as.data.frame(predict(model_logit, testset))
+    
+    # append this iteration's prediction to the end of the prediction data frame
+    prediction_logit   <- rbind(prediction_logit, temp_logit)
+    
+    # append this iteration's test set to the testset copy data frame
+    testset_copy_logit <- rbind(testset_copy_logit, as.data.frame(testset[, dependent]))
+    
+    # result
+    result_logit            <- cbind(prediction_logit, testset_copy_logit[, 1])
+    
+    # confustion matrix and accuracy
+    names(result_logit)     <- c("Actual", "Predicted")
+    confusion_matrix_logit  <- table(result_logit$Actual, result_logit$Predicted)
+    accuracy_logit          <- sum(diag(confusion_matrix_logit)) / sum(confusion_matrix_logit)
+    result_logit            <- list("confusion_matrix_logit " = confusion_matrix_logit, 
+                                 "accuracy_logit"          = accuracy_logit)
+  }  
+  
+  temp1 <<- (result_logit$accuracy_logit)
+  
+  return(temp1)
+}
+
+iteration<- list()
+
+for (i in 1:100){
+  print(kfold.logit(i))
+  iteration <<- append(iteration, kfold.logit(i), after = length(iteration))
+  
+}
+
+print(mean(unlist(iteration)))
+
+####################################################################################################
+# cross validation (gentleboost)
+####################################################################################################
+
