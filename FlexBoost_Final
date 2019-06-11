@@ -20,7 +20,7 @@ k             <<- 1/0.78
 
 # seed
 s             <- 1
-set.seed(1)
+
 # feature location of idependent and dependent variables
 independent   <- 1:13
 dependent     <- 15
@@ -28,7 +28,7 @@ dependent     <- 15
 # number of iterations of the model
 iterations    <- 100
 
-# store the result of each model(heuristic, ada, logit, gentle)
+# store the accuracy of each model in each iteration(heuristic, ada, logit, gentle)
 result_h      <- list()
 result_b      <- list()
 result_l      <- list()
@@ -95,7 +95,7 @@ basic.adaboost <- function(X, y, n_rounds = 100,
     e    <- sum(w * (pred != y))
     
     # if error >= 0.5, flip the result
-    if(e >= 0.5){ e <- 1 - e }
+    if(e >= 0.5) { e <- 1 - e }
     
     # learning rate(weight) of each classifiers
     alpha <- 1/2 * log((1-e)/e)
