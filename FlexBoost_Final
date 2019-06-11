@@ -197,7 +197,6 @@ iteration<- list()
 for (i in 1:100){
   print(kfold.basic(i))
   iteration <<- append(iteration, kfold.basic(i), after = length(iteration))
-  
 }
 
 print(mean(unlist(iteration)))
@@ -244,7 +243,7 @@ kfold.logit <- function(iteration){
     confusion_matrix_logit  <- table(result_logit$Actual, result_logit$Predicted)
     accuracy_logit          <- sum(diag(confusion_matrix_logit)) / sum(confusion_matrix_logit)
     result_logit            <- list("confusion_matrix_logit " = confusion_matrix_logit, 
-                                 "accuracy_logit"          = accuracy_logit)
+                                    "accuracy_logit"          = accuracy_logit)
   }  
   
   temp1 <<- (result_logit$accuracy_logit)
@@ -257,7 +256,6 @@ iteration<- list()
 for (i in 1:100){
   print(kfold.logit(i))
   iteration <<- append(iteration, kfold.logit(i), after = length(iteration))
-  
 }
 
 print(mean(unlist(iteration)))
@@ -265,4 +263,58 @@ print(mean(unlist(iteration)))
 ####################################################################################################
 # cross validation (gentleboost)
 ####################################################################################################
+kfold.gentle <- function(iteration){
+  # number of cross validation
+  k       <- 5
+  
+  # fix the seed so that result could be reproducible
+  set.seed(s) 
+  
+  # each data has its own id(1 to 5) to process k fold cross validation 
+  data$id <- sample(1:k, nrow(data), replace = TRUE)
+  list    <- 1:k
+  
+  # data frame reset
+  prediction_gentle <- testset_copy_gentle <- data.frame()
+  
+  #function for k fold
+  for(i in 1:k){
+    # divide the whole dataset into train and testset
+    trainset     <- subset(data, id %in% list[-i])
+    testset      <- subset(data, id %in% c(i))
+    
+    #run a adaboost model
+    model_gentle        <- ada(trainset[, independent], trainset[, dependent], loss = "exponential", type = "gentle", iter = iteration)
+    temp_gentle         <- as.data.frame(predict(model_gentle, testset))
+    
+    # append this iteration's prediction to the end of the prediction data frame
+    prediction_gentle   <- rbind(prediction_gentle, temp_gentle)
+    
+    # append this iteration's test set to the testset copy data frame
+    testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, dependent]))
+    
+    # result
+    result_gentle            <- cbind(prediction_gentle, testset_copy_gentle[, 1])
+    
+    # confustion matrix and accuracy
+    names(result_gentle)     <- c("Actual", "Predicted")
+    confusion_matrix_gentle  <- table(result_gentle$Actual, result_gentle$Predicted)
+    accuracy_gentle          <- sum(diag(confusion_matrix_gentle)) / sum(confusion_matrix_gentle)
+    result_gentle            <- list("confusion_matrix_gentle " = confusion_matrix_gentle, 
+                                 "accuracy_gentle"          = accuracy_gentle)
+  }  
+  
+  temp1 <<- (result_gentle$accuracy_gentle)
+  
+  return(temp1)
+}
+
+iteration<- list()
+
+for (i in 1:100){
+  print(kfold.gentle(i))
+  iteration <<- append(iteration, kfold.gentle(i), after = length(iteration))
+}
+
+print(mean(unlist(iteration)))
 
