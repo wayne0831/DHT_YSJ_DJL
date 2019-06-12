@@ -141,12 +141,12 @@ basic.adaboost <- function(X, y, n_rounds = 100,
 }
 
 ####################################################################################################
-# cross validation (adaboost)
+# k-fold cross validation (adaboost, logitboost, gentleboost)
 ####################################################################################################
 
 # basic adaboost k-fold cross validation
 # iteration : number of rounds
-kfold.basic <- function(iteration){
+k.fold <- function(iteration){
   # number of cross validation
   k       <- 5
   
@@ -158,123 +158,8 @@ kfold.basic <- function(iteration){
   list    <- 1:k
   
   # data frame reset
-  prediction_bm <- testset_copy_bm <- data.frame()
-  
-  #function for k fold
-  for(i in 1:k){
-    # divide the whole dataset into train and testset
-    trainset     <- subset(data, id %in% list[-i])
-    testset      <- subset(data, id %in% c(i))
-    
-    #run a adaboost model
-    model_bm        <- basic.adaboost(trainset[, independent], trainset[, dependent], n_rounds = iteration)
-    temp_bm         <- as.data.frame(predict(model_bm, testset))
-    
-    # append this iteration's prediction to the end of the prediction data frame
-    prediction_bm   <- rbind(prediction_bm, temp_bm)
-    
-    # append this iteration's test set to the testset copy data frame
-    testset_copy_bm <- rbind(testset_copy_bm, as.data.frame(testset[, dependent]))
-    
-    # result
-    result_bm       <- cbind(prediction_bm, testset_copy_bm[, 1])
-    
-    # confustion matrix and accuracy
-    names(result_bm)     <- c("Actual", "Predicted")
-    confusion_matrix_bm  <- table(result_bm$Actual, result_bm$Predicted)
-    accuracy_bm          <- sum(diag(confusion_matrix_bm)) / sum(confusion_matrix_bm)
-    result_bm            <- list("confusion_matrix_bm " = confusion_matrix_bm, 
-                                 "accuracy_bm"          = accuracy_bm)
-  }  
-  
-  temp1 <<- (result_bm$accuracy_bm)
-  
-  return(temp1)
-}
-
-iteration<- list()
-
-for (i in 1:100){
-  print(kfold.basic(i))
-  iteration <<- append(iteration, kfold.basic(i), after = length(iteration))
-}
-
-print(mean(unlist(iteration)))
-
-####################################################################################################
-# cross validation (logitboost)
-####################################################################################################
-
-kfold.logit <- function(iteration){
-  # number of cross validation
-  k       <- 5
-  
-  # fix the seed so that result could be reproducible
-  set.seed(s) 
-  
-  # each data has its own id(1 to 5) to process k fold cross validation 
-  data$id <- sample(1:k, nrow(data), replace = TRUE)
-  list    <- 1:k
-  
-  # data frame reset
+  prediction_ada <- testset_copy_ada <- data.frame()
   prediction_logit <- testset_copy_logit <- data.frame()
-  
-  #function for k fold
-  for(i in 1:k){
-    # divide the whole dataset into train and testset
-    trainset     <- subset(data, id %in% list[-i])
-    testset      <- subset(data, id %in% c(i))
-    
-    #run a logitboost model
-    model_logit        <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = iteration)
-    temp_logit         <- as.data.frame(predict(model_logit, testset))
-    
-    # append this iteration's prediction to the end of the prediction data frame
-    prediction_logit   <- rbind(prediction_logit, temp_logit)
-    
-    # append this iteration's test set to the testset copy data frame
-    testset_copy_logit <- rbind(testset_copy_logit, as.data.frame(testset[, dependent]))
-    
-    # result
-    result_logit       <- cbind(prediction_logit, testset_copy_logit[, 1])
-    
-    # confustion matrix and accuracy
-    names(result_logit)     <- c("Actual", "Predicted")
-    confusion_matrix_logit  <- table(result_logit$Actual, result_logit$Predicted)
-    accuracy_logit          <- sum(diag(confusion_matrix_logit)) / sum(confusion_matrix_logit)
-    result_logit            <- list("confusion_matrix_logit " = confusion_matrix_logit, 
-                                    "accuracy_logit"          = accuracy_logit)
-  }  
-  
-  temp1 <<- (result_logit$accuracy_logit)
-  
-  return(temp1)
-}
-
-iteration<- list()
-
-for (i in 1:100){
-  print(kfold.logit(i))
-  iteration <<- append(iteration, kfold.logit(i), after = length(iteration))
-}
-
-print(mean(unlist(iteration)))
-
-####################################################################################################
-# cross validation (gentleboost)
-####################################################################################################
-kfold.gentle <- function(iteration){
-  # number of cross validation
-  k       <- 5
-  
-  # fix the seed so that result could be reproducible
-  set.seed(s) 
-  
-  # each data has its own id(1 to 5) to process k fold cross validation 
-  data$id <- sample(1:k, nrow(data), replace = TRUE)
-  list    <- 1:k
-  
-  # data frame reset
   prediction_gentle <- testset_copy_gentle <- data.frame()
   
   #function for k fold
@@ -283,18 +168,44 @@ kfold.gentle <- function(iteration){
     trainset     <- subset(data, id %in% list[-i])
     testset      <- subset(data, id %in% c(i))
     
-    #run a gentleboost model
-    model_gentle        <- ada(trainset[, independent], trainset[, dependent], loss = "exponential", type = "gentle", iter = iteration)
-    temp_gentle         <- as.data.frame(predict(model_gentle, testset))
+    #run a adaboost model
+    model_ada                <- basic.adaboost(trainset[, independent], trainset[, dependent], n_rounds = iteration)
+    model_logit              <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = iteration)
+    model_gentle             <- ada(trainset[, independent], trainset[, dependent], loss = "exponential", type = "gentle", iter = iteration)
+    
+    # predict
+    temp_ada                 <- as.data.frame(predict(model_ada, testset))
+    temp_logit               <- as.data.frame(predict(model_logit, testset))
+    temp_gentle              <- as.data.frame(predict(model_gentle, testset))
     
     # append this iteration's prediction to the end of the prediction data frame
-    prediction_gentle   <- rbind(prediction_gentle, temp_gentle)
+    prediction_ada           <- rbind(prediction_ada, temp_ada)
+    prediction_logit         <- rbind(prediction_logit, temp_logit)
+    prediction_gentle        <- rbind(prediction_gentle, temp_gentle)
     
     # append this iteration's test set to the testset copy data frame
-    testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, dependent]))
+    testset_copy_ada         <- rbind(testset_copy_ada, as.data.frame(testset[, dependent]))
+    testset_copy_logit       <- rbind(testset_copy_logit, as.data.frame(testset[, dependent]))
+    testset_copy_gentle      <- rbind(testset_copy_gentle, as.data.frame(testset[, dependent]))
     
     # result
-    result_gentle       <- cbind(prediction_gentle, testset_copy_gentle[, 1])
+    result_ada               <- cbind(prediction_ada, testset_copy_ada[, 1])
+    result_logit             <- cbind(prediction_logit, testset_copy_logit[, 1])
+    result_gentle            <- cbind(prediction_gentle, testset_copy_gentle[, 1])
+    
+    # confustion matrix and accuracy
+    names(result_ada)        <- c("Actual", "Predicted")
+    confusion_matrix_ada     <- table(result_ada$Actual, result_ada$Predicted)
+    accuracy_ada             <- sum(diag(confusion_matrix_ada)) / sum(confusion_matrix_ada)
+    result_ada               <- list("confusion_matrix_ada " = confusion_matrix_ada, 
+                                    "accuracy_ada"          = accuracy_ada)
+    
+    # confustion matrix and accuracy
+    names(result_logit)      <- c("Actual", "Predicted")
+    confusion_matrix_logit   <- table(result_logit$Actual, result_logit$Predicted)
+    accuracy_logit           <- sum(diag(confusion_matrix_logit)) / sum(confusion_matrix_logit)
+    result_logit             <- list("confusion_matrix_logit " = confusion_matrix_logit, 
+                                    "accuracy_logit"          = accuracy_logit)
     
     # confustion matrix and accuracy
     names(result_gentle)     <- c("Actual", "Predicted")
@@ -304,17 +215,41 @@ kfold.gentle <- function(iteration){
                                      "accuracy_gentle"          = accuracy_gentle)
   }  
   
-  temp1 <<- (result_gentle$accuracy_gentle)
+  # store the accuracy of each model
+  acc_ada    <<- (result_ada$accuracy_ada)
+  acc_logit  <<- (result_logit$accuracy_logit)
+  acc_gentle <<- (result_gentle$accuracy_gentle)
   
-  return(temp1)
+  acc_list   <- list("adaboost"    = acc_ada,
+                     "logitboost"  = acc_logit,
+                     "gentleboost" = acc_gentle)
+  return(acc_list)
 }
 
-iteration<- list()
+tt_b <<- list()
+tt_l <<- list()
+tt_g <<- list()
 
-for (i in 1:100){
-  print(kfold.gentle(i))
-  iteration <<- append(iteration, kfold.gentle(i), after = length(iteration))
+for (i1 in 1){
+  s <<- i1
+  for (i2 in 1:100){
+    k.fold(i2)
+    tt_b <<- append(tt_b,acc_ada,after= length(tt_b))
+    tt_l <<- append(tt_l,acc_logit,after= length(tt_l))
+    tt_g <<- append(tt_g,acc_gentle,after= length(tt_g))
+  }
+  result_b <<- append(result_b, mean(unlist(tt_b)), after = length(result_b))
+  result_l <<- append(result_l, mean(unlist(tt_l)), after = length(result_l))
+  result_g <<- append(result_g, mean(unlist(tt_g)), after = length(result_g))
+  cat("AdaBoost Mean Accuracy")
+  cat("\n")
+  cat(green(mean(unlist(tt_b))))
+  cat("\n")
+  cat("LogitBoost Mean Accuracy")
+  cat("\n")
+  cat(blue(mean(unlist(tt_l))))
+  cat("\n")
+  cat("LogitBoost Mean Accuracy")
+  cat(black(mean(unlist(tt_g))))
+  cat("\n")
 }
-
-print(mean(unlist(iteration)))
-
