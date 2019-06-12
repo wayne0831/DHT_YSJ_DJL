@@ -241,15 +241,14 @@ for (i1 in 1){
   result_g <<- append(result_g, mean(unlist(tt_g)), after = length(result_g))
   cat("AdaBoost Mean Accuracy")
   cat("\n")
-  cat(green(mean(unlist(tt_b))))
+  cat(green(mean(unlist(tt_a))))
   cat("\n")
   cat("LogitBoost Mean Accuracy")
   cat("\n")
   cat(blue(mean(unlist(tt_l))))
   cat("\n")
   cat("GentleBoost Mean Accuracy")
-  cat(black(mean(unlist(tt_g))))
   cat("\n")
+  cat(black(mean(unlist(tt_g))))
 }
-
 
