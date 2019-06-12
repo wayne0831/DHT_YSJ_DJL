@@ -225,7 +225,7 @@ kfold.logit <- function(iteration){
     trainset     <- subset(data, id %in% list[-i])
     testset      <- subset(data, id %in% c(i))
     
-    #run a adaboost model
+    #run a logitboost model
     model_logit        <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = iteration)
     temp_logit         <- as.data.frame(predict(model_logit, testset))
     
@@ -283,7 +283,7 @@ kfold.gentle <- function(iteration){
     trainset     <- subset(data, id %in% list[-i])
     testset      <- subset(data, id %in% c(i))
     
-    #run a adaboost model
+    #run a gentleboost model
     model_gentle        <- ada(trainset[, independent], trainset[, dependent], loss = "exponential", type = "gentle", iter = iteration)
     temp_gentle         <- as.data.frame(predict(model_gentle, testset))
     
