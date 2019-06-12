@@ -13,7 +13,7 @@ sapply(pkgs, require, character.only = TRUE)
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset_Final")
 
 # load the dataset
-data          <- read.csv('Iris.csv', TRUE)
+data          <- read.csv('Ionosphere.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
 k             <<- 1/0.78
@@ -22,12 +22,11 @@ k             <<- 1/0.78
 s             <- 1
 
 # feature location of idependent and dependent variables
-independent   <- c(1:4)
-dependent     <- c(7)
+independent   <- c(1:34)
+dependent     <- c(35)
 
 # number of iterations of the model
 iterations    <- 100
-
 
 # divide the dataset into input features and target
 X             <- data[, independent]
@@ -214,9 +213,9 @@ k.fold <- function(iteration){
   }  
   
   # store the accuracy of each model
-  acc_ada    <- result_ada$accuracy_ada
-  acc_logit  <- result_logit$accuracy_logit
-  acc_gentle <- result_gentle$accuracy_gentle
+  acc_ada    <<- result_ada$accuracy_ada           # <- 이면 실행 안됨
+  acc_logit  <<- result_logit$accuracy_logit
+  acc_gentle <<- result_gentle$accuracy_gentle
   
   acc_list   <- list("adaboost"    = acc_ada,
                      "logitboost"  = acc_logit,
@@ -233,9 +232,9 @@ for (i1 in 1){
   s <<- i1
   for (i2 in 1:100){
     k.fold(i2)
-    tt_a <- append(tt_a,acc_ada,after= length(tt_a))
-    tt_l <- append(tt_l,acc_logit,after= length(tt_l))
-    tt_g <- append(tt_g,acc_gentle,after= length(tt_g))
+    tt_a <- append(tt_a, acc_ada, after= length(tt_a))
+    tt_l <- append(tt_l, acc_logit, after= length(tt_l))
+    tt_g <- append(tt_g, acc_gentle, after= length(tt_g))
   }
   
   result_a <- append(result_a, mean(unlist(tt_a)), after = length(result_a))
@@ -255,3 +254,4 @@ for (i1 in 1){
   cat(black(mean(unlist(tt_g))))
   
 }
+
