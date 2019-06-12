@@ -28,15 +28,13 @@ dependent     <- c(6)
 # number of iterations of the model
 iterations    <- 100
 
-# store the accuracy of each model in each iteration(heuristic, ada, logit, gentle)
-result_h      <- list()
-result_b      <- list()
-result_l      <- list()
-result_g      <- list()
 
 # divide the dataset into input features and target
 X             <- data[, independent]
 y             <- data[, dependent]
+
+# store the accuracy of each model in each iteration(ada, logit, gentle, flex)
+result_a  <- result_l  <- result_g  <-result_f  <- list()
 
 ####################################################################################################
 # 1. predict function
@@ -253,4 +251,5 @@ for (i1 in 1){
   cat(black(mean(unlist(tt_g))))
   cat("\n")
 }
+
 
