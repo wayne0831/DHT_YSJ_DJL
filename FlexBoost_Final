@@ -13,7 +13,7 @@ sapply(pkgs, require, character.only = TRUE)
 setwd("C:\\Users\\Wayne\\Desktop\\Dataset_Final")
 
 # load the dataset
-data          <- read.csv('Wine.csv', TRUE)
+data          <- read.csv('Iris.csv', TRUE)
 
 # heuristic parameter which controls the value of alpha
 k             <<- 1/0.78
@@ -22,8 +22,8 @@ k             <<- 1/0.78
 s             <- 1
 
 # feature location of idependent and dependent variables
-independent   <- 1:13
-dependent     <- 15
+independent   <- c(1:4)
+dependent     <- c(6)
 
 # number of iterations of the model
 iterations    <- 100
@@ -198,14 +198,14 @@ k.fold <- function(iteration){
     confusion_matrix_ada     <- table(result_ada$Actual, result_ada$Predicted)
     accuracy_ada             <- sum(diag(confusion_matrix_ada)) / sum(confusion_matrix_ada)
     result_ada               <- list("confusion_matrix_ada " = confusion_matrix_ada, 
-                                    "accuracy_ada"          = accuracy_ada)
+                                     "accuracy_ada"          = accuracy_ada)
     
     # confustion matrix and accuracy
     names(result_logit)      <- c("Actual", "Predicted")
     confusion_matrix_logit   <- table(result_logit$Actual, result_logit$Predicted)
     accuracy_logit           <- sum(diag(confusion_matrix_logit)) / sum(confusion_matrix_logit)
     result_logit             <- list("confusion_matrix_logit " = confusion_matrix_logit, 
-                                    "accuracy_logit"          = accuracy_logit)
+                                     "accuracy_logit"          = accuracy_logit)
     
     # confustion matrix and accuracy
     names(result_gentle)     <- c("Actual", "Predicted")
@@ -226,7 +226,7 @@ k.fold <- function(iteration){
   return(acc_list)
 }
 
-tt_b <<- list()
+tt_a <<- list()
 tt_l <<- list()
 tt_g <<- list()
 
@@ -234,11 +234,11 @@ for (i1 in 1){
   s <<- i1
   for (i2 in 1:100){
     k.fold(i2)
-    tt_b <<- append(tt_b,acc_ada,after= length(tt_b))
+    tt_a <<- append(tt_a,acc_ada,after= length(tt_a))
     tt_l <<- append(tt_l,acc_logit,after= length(tt_l))
     tt_g <<- append(tt_g,acc_gentle,after= length(tt_g))
   }
-  result_b <<- append(result_b, mean(unlist(tt_b)), after = length(result_b))
+  result_a <<- append(result_a, mean(unlist(tt_a)), after = length(result_a))
   result_l <<- append(result_l, mean(unlist(tt_l)), after = length(result_l))
   result_g <<- append(result_g, mean(unlist(tt_g)), after = length(result_g))
   cat("AdaBoost Mean Accuracy")
@@ -249,7 +249,8 @@ for (i1 in 1){
   cat("\n")
   cat(blue(mean(unlist(tt_l))))
   cat("\n")
-  cat("LogitBoost Mean Accuracy")
+  cat("GentleBoost Mean Accuracy")
   cat(black(mean(unlist(tt_g))))
   cat("\n")
 }
+
