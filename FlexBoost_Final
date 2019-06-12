@@ -23,7 +23,7 @@ s             <- 1
 
 # feature location of idependent and dependent variables
 independent   <- c(1:4)
-dependent     <- c(6)
+dependent     <- c(7)
 
 # number of iterations of the model
 iterations    <- 100
@@ -214,9 +214,9 @@ k.fold <- function(iteration){
   }  
   
   # store the accuracy of each model
-  acc_ada    <<- (result_ada$accuracy_ada)
-  acc_logit  <<- (result_logit$accuracy_logit)
-  acc_gentle <<- (result_gentle$accuracy_gentle)
+  acc_ada    <- result_ada$accuracy_ada
+  acc_logit  <- result_logit$accuracy_logit
+  acc_gentle <- result_gentle$accuracy_gentle
   
   acc_list   <- list("adaboost"    = acc_ada,
                      "logitboost"  = acc_logit,
@@ -224,21 +224,23 @@ k.fold <- function(iteration){
   return(acc_list)
 }
 
-tt_a <<- list()
-tt_l <<- list()
-tt_g <<- list()
+
+tt_a <- list()
+tt_l <- list()
+tt_g <- list()
 
 for (i1 in 1){
   s <<- i1
   for (i2 in 1:100){
     k.fold(i2)
-    tt_a <<- append(tt_a,acc_ada,after= length(tt_a))
-    tt_l <<- append(tt_l,acc_logit,after= length(tt_l))
-    tt_g <<- append(tt_g,acc_gentle,after= length(tt_g))
+    tt_a <- append(tt_a,acc_ada,after= length(tt_a))
+    tt_l <- append(tt_l,acc_logit,after= length(tt_l))
+    tt_g <- append(tt_g,acc_gentle,after= length(tt_g))
   }
-  result_a <<- append(result_a, mean(unlist(tt_a)), after = length(result_a))
-  result_l <<- append(result_l, mean(unlist(tt_l)), after = length(result_l))
-  result_g <<- append(result_g, mean(unlist(tt_g)), after = length(result_g))
+  result_a <- append(result_a, mean(unlist(tt_a)), after = length(result_a))
+  result_l <- append(result_l, mean(unlist(tt_l)), after = length(result_l))
+  result_g <- append(result_g, mean(unlist(tt_g)), after = length(result_g))
+  
   cat("AdaBoost Mean Accuracy")
   cat("\n")
   cat(green(mean(unlist(tt_a))))
