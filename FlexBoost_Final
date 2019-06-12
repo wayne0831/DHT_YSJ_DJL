@@ -237,6 +237,7 @@ for (i1 in 1){
     tt_l <- append(tt_l,acc_logit,after= length(tt_l))
     tt_g <- append(tt_g,acc_gentle,after= length(tt_g))
   }
+  
   result_a <- append(result_a, mean(unlist(tt_a)), after = length(result_a))
   result_l <- append(result_l, mean(unlist(tt_l)), after = length(result_l))
   result_g <- append(result_g, mean(unlist(tt_g)), after = length(result_g))
@@ -252,5 +253,5 @@ for (i1 in 1){
   cat("GentleBoost Mean Accuracy")
   cat("\n")
   cat(black(mean(unlist(tt_g))))
+  
 }
-
