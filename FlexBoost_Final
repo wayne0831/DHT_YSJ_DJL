@@ -177,7 +177,7 @@ kfold.basic <- function(iteration){
     testset_copy_bm <- rbind(testset_copy_bm, as.data.frame(testset[, dependent]))
     
     # result
-    result_bm            <- cbind(prediction_bm, testset_copy_bm[, 1])
+    result_bm       <- cbind(prediction_bm, testset_copy_bm[, 1])
     
     # confustion matrix and accuracy
     names(result_bm)     <- c("Actual", "Predicted")
@@ -236,7 +236,7 @@ kfold.logit <- function(iteration){
     testset_copy_logit <- rbind(testset_copy_logit, as.data.frame(testset[, dependent]))
     
     # result
-    result_logit            <- cbind(prediction_logit, testset_copy_logit[, 1])
+    result_logit       <- cbind(prediction_logit, testset_copy_logit[, 1])
     
     # confustion matrix and accuracy
     names(result_logit)     <- c("Actual", "Predicted")
@@ -294,14 +294,14 @@ kfold.gentle <- function(iteration){
     testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, dependent]))
     
     # result
-    result_gentle            <- cbind(prediction_gentle, testset_copy_gentle[, 1])
+    result_gentle       <- cbind(prediction_gentle, testset_copy_gentle[, 1])
     
     # confustion matrix and accuracy
     names(result_gentle)     <- c("Actual", "Predicted")
     confusion_matrix_gentle  <- table(result_gentle$Actual, result_gentle$Predicted)
     accuracy_gentle          <- sum(diag(confusion_matrix_gentle)) / sum(confusion_matrix_gentle)
     result_gentle            <- list("confusion_matrix_gentle " = confusion_matrix_gentle, 
-                                 "accuracy_gentle"          = accuracy_gentle)
+                                     "accuracy_gentle"          = accuracy_gentle)
   }  
   
   temp1 <<- (result_gentle$accuracy_gentle)
