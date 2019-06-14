@@ -1,32 +1,4 @@
-pkgs <- c("rpart", "raprt.plot", "crayon")
-
-#sapply(pkgs, install.packages, character.only = TRUE)
-
-sapply(pkgs, require, character.only = TRUE)
-
-# set work directory
-setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
-
-# load the dataset
-data          <- read.csv('spambase.csv', TRUE)
-
-# heuristic parameter which controls the value of alpha
-k             <<- 2
-
-# seed
-s             <- 3
-
-# feature location of idependent and dependent variables
-independent   <- 1:57
-dependent     <- 58
-
-# divide the dataset into input features and output feature
-X             <- data[, independent]
-y             <- data[, dependent]
-
-# heuristic adaboost k-fold cross validation
-# tt : number of rounds
-kfold_heu <- function(tt){
+kfold.flex <- function(iteration){
   # number of cross validation
   k       <- 5
   
@@ -39,55 +11,38 @@ kfold_heu <- function(tt){
   list    <- 1:k
   
   # data frame reset
-  prediction_hm <- testset_copy_hm <- data.frame()
+  prediction_flex <- testset_copy_flex <- data.frame()
   
   #function for k fold
   for(i in 1:k){
     # remove rows with id i from dataframe to create training set
     trainset     <- subset(data, id %in% list[-i])
-    
-    # select rows with id i to create test set
     testset      <- subset(data, id %in% c(i))
     
     #run a adaboost model
-    model_hm        <- heuristic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)  
+    model_flex             <- flexboost(trainset[, independent], trainset[, dependent], n_rounds = iteration)  
     
-    temp_hm         <- as.data.frame(predict(model_hm, testset))
+    # predict
+    temp_flex              <- as.data.frame(predict(model_flex, testset))
     
     # append this iteration's prediction to the end of the prediction data frame
-    prediction_hm   <- rbind(prediction_hm, temp_hm)
+    prediction_flex        <- rbind(prediction_flex, temp_flex)
     
     # append this iteration's test set to the testset copy data frame
-    testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
+    testset_copy_flex      <- rbind(testset_copy_flex, as.data.frame(testset[, dependent]))
     
-    # add predictions and actual Sepal Length values
-    result_hm            <- cbind(prediction_hm, testset_copy_hm[, 1])
+    # result
+    result_flex            <- cbind(prediction_flex, testset_copy_flex[, 1])
     
-    names(result_hm)     <- c("Actual", "Predicted")
-    
-    confusion_matrix_hm  <- table(result_hm$Actual, result_hm$Predicted )
-    
-    accuracy_hm          <- sum(diag(confusion_matrix_hm)) / sum(confusion_matrix_hm)
-    
-    result_hm            <- list("confusion_matrix_hm " = confusion_matrix_hm, 
-                                 "accuracy_hm"          = accuracy_hm)
+    # confustion matrix and accuracy
+    names(result_flex)     <- c("Actual", "Predicted")
+    confusion_matrix_flex  <- table(result_flex$Actual, result_flex$Predicted )
+    accuracy_flex          <- sum(diag(confusion_matrix_flex)) / sum(confusion_matrix_flex)
+    result_flex            <- list("confusion_matrix_flex " = confusion_matrix_flex, 
+                                   "accuracy_flex"          = accuracy_flex)
     
   }  
+  acc_flex <<- (result_flex$accuracy_flex)
   
-  temp2 <<- (result_hm$accuracy_hm)
-  
-  return (temp2)
-  
+  return (acc_flex)
 }
-
-
-tt<- list()
-
-for (i in 1:100){
-  print(kfold_heu(i))
-  tt <<- append(tt, kfold_heu(i), after = length(tt))
-  
-}
-
-print(mean(unlist(tt)))
-
