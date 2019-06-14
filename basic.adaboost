@@ -1,0 +1,72 @@
+####################################################################################################
+# AdaBoost
+####################################################################################################
+# base model is decision stump, which splits only once
+basic.adaboost <- function(X, y, n_rounds = 100,
+                           control = rpart.control(cp = -1, maxdepth = 1)){
+  # count the number of rows
+  n      <- nrow(X)
+  
+  # initialize weight on each data, tree and alpha
+  w      <- rep(1/n, n)
+  trees  <- list()
+  alphas <- list()
+  
+  # build weak classifiers
+  for(i in seq(n_rounds)){
+    
+    tree <- rpart::rpart(y ~ .,
+                         data = data.frame(X), weights = w,
+                         method = "class", control = control,
+                         x = FALSE, y = FALSE, model = TRUE)
+    
+    pred <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
+    
+    # calculate the error of each classifiers
+    e    <- sum(w * (pred != y))
+    
+    # if error >= 0.5, flip the result
+    if(e >= 0.5) { e <- 1 - e }
+    
+    # learning rate(weight) of each classifiers
+    alpha <- 1/2 * log((1-e)/e)
+    
+    # update and normalize weight of each data
+    w     <- w * exp(-alpha*pred*y)
+    w     <- w / sum(w)
+    
+    # If classifier's error rate is nearly 0, boosting process ends
+    if(abs(e) < 1e-5){
+      # if first base classifier predicts data perfectly, boosting process ends
+      if(i == 1){
+        # first base classifier's weight should be 1
+        alphas[[i]] <- 1
+        trees[[i]]  <- tree
+        terms       <- tree$terms
+        
+        break
+      }
+      break
+    }
+    
+    # Remove formulas since they waste memory
+    if(i == 1)  { terms       <- tree$terms }
+    
+    else        { tree$terms  <- NULL }
+    
+    alphas[[i]] <- alpha
+    trees[[i]]  <- tree
+  }
+  
+  result        <- list(terms  = terms,
+                        trees  = trees,
+                        alphas = unlist(alphas))
+  
+  class(result) <- "adaboost"
+  
+  # create confusion matrix for in-sample fits
+  y_hat                   <- stats::predict(result, X)
+  result$confusion_matrix <- table(y, y_hat)
+  
+  return(result)
+}
