@@ -1,0 +1,26 @@
+####################################################################################################
+# predict function
+####################################################################################################
+predict.adaboost <- function(object, X, type = c("response", "prob"), n_tree = NULL){
+  # handle args
+  type <- match.arg(type)
+  
+  if(is.null(n_tree)) { tree_seq <- seq_along(object$alphas) } 
+  
+  else                { tree_seq <- seq(1, n_tree) }
+  
+  # evaluate score function on sample
+  f <- 0
+  
+  for(i in tree_seq){
+    tree       <- object$trees[[i]]
+    tree$terms <- object$terms
+    pred       <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
+    f          <- f + object$alphas[i] * pred
+  }
+  
+  # handle response type
+  if(type == "response")  { sign(f) } 
+  
+  else if(type == "prob") { 1/(1 + exp(-2 * f)) }
+}
