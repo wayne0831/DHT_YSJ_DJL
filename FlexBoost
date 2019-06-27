@@ -1,758 +1,252 @@
-####################################################################################################
-# 0. initial setting
-# -1 : k < 1 ; more weight on well classified data
-# 0 : k = 1 ; basic model
-# 1 : k > 1 ; more weight on misclassified data
-####################################################################################################
-# load the library
-pkgs <- c("rpart", "crayon", "caTools", "ada")
+
+    set.seed(1)
+sample(1:10)
+
+pkgs <- c("rpart", "crayon", "caTools", "ada", "caret")
 
 sapply(pkgs, require, character.only = TRUE)
 
-# set work directory
-setwd("C:\\Users\\Wayne\\Desktop\\Dataset")
+setwd("C:\\Users\\Wayne\\Desktop\\Dataset_Final")
 
-# load the dataset
-data          <- read.csv('ilpd.csv', TRUE)
+data          <- read.csv('Sonar.csv', TRUE)
 
-# heuristic parameter which controls the value of alpha
-k             <<- 1/0.78
+independent   <- 1:60
+dependent     <- 61
 
-# seed
-s             <- 1
-set.seed(1)
-# feature location of idependent and dependent variables
-independent   <- 1:9
-dependent     <- 10
-
-# number of iterations of the model
-iterations    <- 100
-
-# store the result of each model(heuristic, ada, logit, gentle)
-result_h      <- list()
-result_b      <- list()
-result_l      <- list()
-result_g      <- list()
-
-# divide the dataset into input features and target
+# divide the dataset into input features and output feature
 X             <- data[, independent]
 y             <- data[, dependent]
 
-
 ####################################################################################################
-# 1. predict function
-####################################################################################################
-
 # predict function
-predict.adaboost <- function(object, X, type = c("response", "prob"),
-                             n_tree = NULL, ...){
+####################################################################################################
+predict.adaboost <- function(object, X, type = c("response", "prob"), n_tree = NULL){
   # handle args
   type <- match.arg(type)
   
-  if(is.null(n_tree)){
-    
-    tree_seq <- seq_along(object$alphas)
-    
-  } else{
-    
-    if(n_tree > length(object$alpha))
-      
-      stop('n_tree must be less than the number of trees used in fit')
-    
-    tree_seq <- seq(1, n_tree)
-    
-  }
+  if(is.null(n_tree)) { tree_seq <- seq_along(object$alphas) } 
+  
+  else                { tree_seq <- seq(1, n_tree) }
   
   # evaluate score function on sample
   f <- 0
   
   for(i in tree_seq){
-    
     tree       <- object$trees[[i]]
-    
     tree$terms <- object$terms
-    
-    pred       <- as.integer(as.character(stats::predict(tree, data.frame(X),
-                                                         type = "class")))
+    pred       <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
     f          <- f + object$alphas[i] * pred
-    
   }
   
   # handle response type
-  if(type == "response"){
-    
-    sign(f)
-    
-  } else if(type == "prob"){
-    
-    1/(1 + exp(-2 * f))
-    
-  }
-  
+  if(type == "response")  { sign(f) } 
+  else if(type == "prob") { 1/(1 + exp(-2 * f)) }
 }
 
-
-####################################################################################################
-# 1. AdaBoost
-####################################################################################################
-
-# base model is decision stump, which splits only once
-basic_adaboost <- function(X, y, n_rounds = 100,
+basic.adaboost <- function(X, y, n_rounds = 100,
                            control = rpart.control(cp = -1, maxdepth = 1)){
-  
   # count the number of rows
   n      <- nrow(X)
   
-  # initialize weight on each data
-  w      <- rep(1/n, n)
-  
-  # initalize tree and alpha
+  # initialize weight on each data, tree and alpha
+  w      <- list(rep(1/n, n))
   trees  <- list()
   alphas <- list()
+  
+  w.list <- list()
+  w.temp <- list()
+  res.list <<- list()
+  alphas.list <<- list()
+  tree.list <<- list()
   
   # build weak classifiers
   for(i in seq(n_rounds)){
     
     tree <- rpart::rpart(y ~ .,
-                         data = data.frame(X), weights = w,
+                         data = data.frame(X), weights = w[[i]],
                          method = "class", control = control,
                          x = FALSE, y = FALSE, model = TRUE)
-    
     
     pred <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
     
     # calculate the error of each classifiers
-    e    <- sum(w * (pred != y))
+    e    <- sum(w[[i]] * (pred != y))
     
     # if error >= 0.5, flip the result
-    if(e >= 0.5){
-      
-      e <- 1 - e
-      
-    }
+    if(e >= 0.5) { e <- 1 - e }
     
-    else{
-      
-      e <- e
-      
-    }
     # learning rate(weight) of each classifiers
-    alpha <- 1/2 * log((1-e)/e)
-    
-    # update weight of each data
-    w     <- w * exp(-alpha*pred*y)
-    
-    # normalize weight of each data
-    w     <- w / sum(w)
-    
-    # If classifier's error rate is nearly 0, boosting process ends
-    if(abs(e) < 1e-5){
-      # if first base classifier predicts data perfectly, boosting process ends
-      if(i == 1){
-        # first base classifier's weight should be 1
-        alphas[[i]] <- 1
-        
-        trees[[i]]  <- tree
-        
-        terms       <- tree$terms
-        
-        break
-        
+    n_count = 0
+    for(i1 in k.list){
+      n_count = n_count + 1
+      #alpha <- (1/(2*k.path[[i]])) * log((1-e)/e)
+      #alpha <- 1/2 * log((1-e)/e)
+      
+      alpha <- 1/(2*i1) * log((1-e)/e)
+      #print(2*i1)
+      
+      # update and normalize weight of each data
+      w.list[[n_count]]     <- w[[i]] * exp(-alpha*pred*y)
+      w.list[[n_count]]     <- w.list[[n_count]] / sum(w.list[[n_count]])
+      
+      # If classifier's error rate is nearly 0, boosting process ends
+      if(abs(e) < 1e-5){
+        # if first base classifier predicts data perfectly, boosting process ends
+        if(i == 1){
+          # first base classifier's weight should be 1
+          alphas[[i]] <- 1
+          trees[[i]]  <- tree
+          terms       <- tree$terms
+        }
       }
       
-      break
+      # Remove formulas since they waste memory
+      if(i == 1)  { terms       <- tree$terms }
+      else        { tree$terms  <- NULL }
       
+      alphas[[i]] <- alpha
+      trees[[i]]  <- tree
+      
+      alphas.list[[n_count]] <- alpha
+      tree.list[[n_count]]   <- tree
+      
+      result        <- list(terms  = terms,
+                            trees  = trees,
+                            alphas = unlist(alphas))
+      
+      class(result) <- "adaboost"
+      
+      y_hat                   <- stats::predict(result, X)
+      result$confusion_matrix <- table(y, y_hat)
+      
+      res.list <<- append(res.list, (sum(diag(result$confusion_matrix)) / sum(result$confusion_matrix)), after = length(res.list))
+     
+      alphas[[i]] <- NULL
+      trees[[i]] <- NULL
+    }
+
+    if (res.list[[1]] > res.list[[2]] & res.list[[1]] > res.list[[3]]){
+      k.path      <<- append(k.path, 1/k.k, after = length(k.path))
+      w[[i+1]]    <- w.list[[1]]
+      alphas[[i]] <- alphas.list[[1]]
+      trees[[i]]  <- tree.list[[1]]
+    }
+    else if (res.list[[2]] > res.list[[1]] & res.list[[2]] > res.list[[3]]){
+      k.path      <<- append(k.path, 1, after = length(k.path))
+      w[[i+1]]    <- w.list[[2]]
+      alphas[[i]] <- alphas.list[[2]]
+      trees[[i]]  <- tree.list[[2]]
     }
     
+    else if (res.list[[3]] > res.list[[1]] & res.list[[3]] > res.list[[2]]){
+      k.path      <<- append(k.path, k.k, after = length(k.path))
+      w[[i+1]]    <- w.list[[3]]
+      alphas[[i]] <- alphas.list[[3]]
+      trees[[i]]  <- tree.list[[3]]
+    }
     
+    else if (res.list[[1]] > res.list[[3]] & res.list[[1]] == res.list[[2]]){
+      k.path      <<- append(k.path, 1, after = length(k.path))
+      w[[i+1]]    <- w.list[[2]]
+      alphas[[i]] <- alphas.list[[2]]
+      trees[[i]]  <- tree.list[[2]]
+    }
     
-    # Remove formulas since they waste memory
-    if(i == 1){
-      
-      terms       <- tree$terms
-      
+    else if (res.list[[1]] > res.list[[2]] & res.list[[1]] == res.list[[3]]){
+      k.path      <<- append(k.path, k.k, after = length(k.path))
+      w[[i+1]]    <- w.list[[3]]
+      alphas[[i]] <- alphas.list[[3]]
+      trees[[i]]  <- tree.list[[3]]
+    }
+    
+    else if (res.list[[2]] > res.list[[1]] & res.list[[2]] == res.list[[3]]){
+      k.path      <<- append(k.path, 1, after = length(k.path))
+      w[[i+1]]    <- w.list[[2]]
+      alphas[[i]] <- alphas.list[[2]]
+      trees[[i]]  <- tree.list[[2]]
     }
     
     else{
-      
-      tree$terms <- NULL
-      
+      k.path      <<- append(k.path, 1, after = length(k.path))
+      w[[i+1]]    <- w.list[[2]]
+      alphas[[i]] <- alphas.list[[2]]
+      trees[[i]]  <- tree.list[[2]]
     }
     
-    alphas[[i]] <- alpha
-    
-    trees[[i]]  <- tree
-    
+    #print(res.list[which.max(res.list)])
+    res.list   <<- list()
+    w.list     <<- list()
+    alpha.list <<- list()
+    tree.list  <<- list()
+    #print(alphas[[i]])
   }
   
+  result        <- list(terms  = terms,
+                        trees  = trees,
+                        alphas = unlist(alphas))
   
+  class(result) <- "adaboost"
   
-  
-  
-  out        <- list(alphas = unlist(alphas),
-                     trees = trees,
-                     terms = terms)
-  
-  class(out) <- "adaboost"
-  
-  # create confusion matrix for in-sample fits
-  y_hat                <- stats::predict(out, X)
-  
-  out$confusion_matrix <- table(y, y_hat)
-  
-  out
-  
+  y_hat                   <- stats::predict(result, X)
+  result$confusion_matrix <- table(y, y_hat)
+  #print((sum(diag(result$confusion_matrix)) / sum(result$confusion_matrix)))
+  #print(result$alphas)
+  return(result)
 }
 
-####################################################################################################
-# 2. FlexBoost(heuristic adaboost)
-####################################################################################################
-
-heuristic_adaboost <- function(X, y, n_rounds = 100,
-                               control = rpart.control(cp = -1, maxdepth = 1)){
-  
-  # count the number of rows
-  n      <- nrow(X)
-  
-  # initialize weight on each data
-  w      <- rep(1/n, n)
-  
-  # initalize tree and alpha
-  trees  <- list()
-  alphas <- list()
-  
-  
-  # build weak classifiers
-  for(i in seq(n_rounds)){
-    tree <- rpart::rpart(y ~ .,
-                         data = data.frame(X), weights = w,
-                         method = "class", control = control,
-                         x = FALSE, y = FALSE, model = TRUE)
-    
-    pred <- as.integer(as.character(stats::predict(tree, data.frame(X), type = "class")))
-    
-    # calculate the error of each classifiers
-    e    <- sum(w * (pred != y))
-    
-    # if error >= 0.5, flip the result
-    if(e >= 0.5){
-      
-      e <- 1 - e
-      
-    }
-    
-    else{
-      
-      e <- e
-      
-    }
-    
-    # if k > 1 model is best
-    if (heu_list[i] == 1){ #more weight in mis
-      
-      #alpha <- (1/(h + 1)) * log((1/h) * ((1-e)/e))
-      alpha <- 1/(2*k) * log((1-e)/e)
-      
-      # update weight of each data
-      for (tt in 1:length(w)){
-        # if prediction == actual value , less weight on data
-        if (alpha * pred[tt] * y[tt] > 0){
-          
-          w[tt] <- w[tt] * (exp(k * (-alpha)))
-          
-        }
-        # if prediction != actual value, more weight on data
-        else{
-          
-          w[tt] <- w[tt] * (exp(k * (alpha)))
-          
-        }
-        
-      }
-      
-    }
-    
-    # if basic model is best
-    if (heu_list[i] == 0){
-      
-      alpha <- 1/2 * log((1-e)/e)
-      
-      # update weight of each data
-      w     <- w * exp(-alpha * pred * y)
-      
-    }
-    
-    # if k < 1 model is best
-    if (heu_list[i] == -1){
-      
-      #alpha <- (h+1)) * log((h)*((1-e)/e))
-      alpha <- (k/2) * log((1-e)/e)
-      
-      # update weight of each data
-      for (tt in 1:length(w)){
-        # if prediction == actual value , less weight on data
-        if (alpha * pred[tt] * y[tt] > 0){
-          
-          w[tt] <- w[tt] * (exp((1/k)*(-alpha)))
-          
-        }
-        # if prediction != actual value, more weight on data
-        else{
-          
-          w[tt] <- w[tt] * (exp((1/k)*(alpha)))
-          
-        }
-        
-      }
-      
-    }
-    
-    # normalize weight of each data
-    w     <- w / sum(w)
-    
-    # If classifier's error rate is nearly 0, boosting process ends
-    if(abs(e) < 1e-5){
-      
-      # if first base classifier predicts data perfectly, boosting process ends
-      if(i == 1){
-        
-        # first base classifier's weight should be 1
-        alphas[[i]] <- 1
-        
-        trees[[i]]  <- tree
-        
-        terms       <- tree$terms
-        
-        break
-        
-      }
-      
-      break
-      
-    }
-    
-    
-    
-    # Remove formulas since they waste memory
-    if(i == 1){
-      
-      terms       <- tree$terms
-      
-    }
-    
-    else{
-      
-      tree$terms <- NULL
-      
-    }
-    
-    trees[[i]]  <- tree
-    
-    alphas[[i]] <- alpha
-    
-  }
-  
-  out        <- list(alphas = unlist(alphas),
-                     trees = trees,
-                     terms = terms)
-  
-  class(out) <- "adaboost"
-  
-  # create confusion matrix for in-sample fits
-  y_hat                <- stats::predict(out, X)
-  
-  out$confusion_matrix <- table(y, y_hat)
-  
-  out
-  
-}
-
-
-####################################################################################################
-# 3. K-fold cross validation 
-####################################################################################################
-
-# basic adaboost k-fold cross validation
-# tt : number of rounds
-kfold_basic <- function(tt){
+kfold.ada <- function(iteration){
   # number of cross validation
   k       <- 5
   
-  # fix the seed so that each model train and test the same data
-  set.seed(s)
+  # fix the seed so that result could be reproducible
+  set.seed(1) 
   
-  # each data has its own id(1 to 5) to process k fold cross validation
+  # each data has its own id(1 to 5) to process k fold cross validation 
   data$id <- sample(1:k, nrow(data), replace = TRUE)
-  
   list    <- 1:k
   
   # data frame reset
-  prediction_bm <- testset_copy_bm <- data.frame()
+  prediction_ada <- testset_copy_ada <- data.frame()
   
   #function for k fold
   for(i in 1:k){
-    
-    # remove rows with id i from dataframe to create training set
-    # select rows with id i to create test set
+    # divide the whole dataset into train and testset
     trainset     <- subset(data, id %in% list[-i])
     testset      <- subset(data, id %in% c(i))
     
     #run a adaboost model
-    model_bm        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
-    
-    temp_bm         <- as.data.frame(predict(model_bm, testset))
-    
-    # append this iteration's prediction to the end of the prediction data frame
-    prediction_bm   <- rbind(prediction_bm, temp_bm)
-    
-    # append this iteration's test set to the testset copy data frame
-    testset_copy_bm <- rbind(testset_copy_bm, as.data.frame(testset[, dependent]))
-    
-    
-    # add predictions and actual Sepal Length values
-    result_bm            <- cbind(prediction_bm, testset_copy_bm[, 1])
-    
-    names(result_bm)     <- c("Actual", "Predicted")
-    
-    confusion_matrix_bm  <- table(result_bm$Actual, result_bm$Predicted )
-    
-    accuracy_bm          <- sum(diag(confusion_matrix_bm)) / sum(confusion_matrix_bm)
-    
-    result_bm            <- list("confusion_matrix_bm " = confusion_matrix_bm,
-                                 accuracy_bm          = accuracy_bm)
-    
-  }
-  
-  temp1 <<- (result_bm$accuracy_bm)
-  
-  return(temp1)
-}
-
-# heuristic adaboost k-fold cross validation
-# tt : number of rounds
-kfold_heu <- function(tt){
-  # number of cross validation
-  k       <- 5
-  
-  # fix the seed so that each model train and test the same data
-  set.seed(s)
-  
-  # each data has its own id(1 to 5) to process k fold cross validation
-  data$id <- sample(1:k, nrow(data), replace = TRUE)
-  
-  list    <- 1:k
-  
-  # data frame reset
-  prediction_hm <- testset_copy_hm <- data.frame()
-  
-  #function for k fold
-  for(i in 1:k){
-    # remove rows with id i from dataframe to create training set
-    # select rows with id i to create test set
-    trainset     <- subset(data, id %in% list[-i])
-    testset      <- subset(data, id %in% c(i))
-    
-    #run a adaboost model
-    model_hm        <- heuristic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
-    
-    temp_hm         <- as.data.frame(predict(model_hm, testset))
+    model_ada                <- basic.adaboost(trainset[, independent], trainset[, dependent], n_rounds = iteration)
+    k.path <<- list()
+    # predict
+    temp_ada                 <- as.data.frame(predict(model_ada, testset))
     
     # append this iteration's prediction to the end of the prediction data frame
-    prediction_hm   <- rbind(prediction_hm, temp_hm)
+    prediction_ada           <- rbind(prediction_ada, temp_ada)
     
     # append this iteration's test set to the testset copy data frame
-    testset_copy_hm <- rbind(testset_copy_hm, as.data.frame(testset[, dependent]))
+    testset_copy_ada         <- rbind(testset_copy_ada, as.data.frame(testset[, dependent]))
     
-    # add predictions and actual Sepal Length values
-    result_hm            <- cbind(prediction_hm, testset_copy_hm[, 1])
+    # result
+    result_ada               <- cbind(prediction_ada, testset_copy_ada[, 1])
     
-    names(result_hm)     <- c("Actual", "Predicted")
-    
-    confusion_matrix_hm  <- table(result_hm$Actual, result_hm$Predicted )
-    
-    accuracy_hm          <- sum(diag(confusion_matrix_hm)) / sum(confusion_matrix_hm)
-    
-    result_hm            <- list("confusion_matrix_hm " = confusion_matrix_hm,
-                                 accuracy_hm          = accuracy_hm)
-    
-  }
+    # confustion matrix and accuracy
+    names(result_ada)        <- c("Actual", "Predicted")
+    confusion_matrix_ada     <- table(result_ada$Actual, result_ada$Predicted)
+    accuracy_ada             <- sum(diag(confusion_matrix_ada)) / sum(confusion_matrix_ada)
+    result_ada               <- list("confusion_matrix_ada " = confusion_matrix_ada, 
+                                     "accuracy_ada"          = accuracy_ada)
+  }  
   
-  temp2 <<- (result_hm$accuracy_hm)
+  # store the accuracy of each model
+  acc_ada    <<- result_ada$accuracy_ada         
   
-  return (temp2)
-  
+  print((acc_ada))
 }
 
 
-plot_result <- function(qwe){
-  # initialize heu_list and res_3
-  heu_list <<- list()
-  res_3    <- list()
-  
-  for (i1 in 1: qwe){
-    # run baisc adaboost k-fold cross validation
-    kfold_basic(i1)
-    
-    # append the baisc adaboost k-fold cross validation result
-    result_b <<- append(result_b, temp1, after = length(result_b))
-    
-    # color of accuracy is blue
-    cat(blue(temp1))
-    cat(("\n"))
-    
-    for (i2 in -1:1){
-      
-      heu_list <<- append(heu_list,i2)
-      
-      res_3    <- append(res_3, kfold_heu(i1), after = length(res_3))
-      
-      heu_list <<- heu_list[1:length(heu_list)-1]
-      
-    }
-    
-    result_h <<- append(result_h, max(unlist(res_3)), after = length(result_h))
-    
-    cat(red(max(unlist(res_3))))
-    cat(("\n"))
-    
-    # if accuracy of 3 models are same, store 0(basic model)
-    if (max(unlist(res_3)) == res_3[1]){
-      
-      if(max(unlist(res_3)) == res_3[2]){
-        
-        if(max(unlist(res_3)) == res_3[3]){
-          heu_list <<- append(heu_list, 0, after = length(heu_list))
-        }
-        
-        else{
-          heu_list <<- append(heu_list, 0, after = length(heu_list))
-        }
-      }
-      
-      else if(max(unlist(res_3)) == res_3[3]){
-        heu_list <<- append(heu_list, -1, after = length(heu_list))
-      }
-      
-      else{
-        heu_list <<- append(heu_list, -1, after = length(heu_list))
-      }
-      
-    }
-    
-    else if (max(unlist(res_3)) == res_3[2]){
-      
-      if(max(unlist(res_3)) == res_3[3]){
-        heu_list <<- append(heu_list, 0, after = length(heu_list))
-      }
-      
-      else{
-        heu_list <<- append(heu_list, 0, after = length(heu_list))
-      }
-      
-    }
-    
-    else{
-      heu_list <<- append(heu_list, 1, after = length(heu_list))
-    }
-    
-    res_3 <- list()
-    
-  }
-  
-  
-  
-  
+for (i in 1:100){
+  k.k <<- 0.01*i
+  k.list <- c(1/k.k, 1, k.k)
+  k.path <<- list()
+  kfold.ada(100)
 }
-
-
-plot_result(iterations)
-
-
-
-kfold_logit <- function(tt){
-  # number of cross validation
-  k       <- 5
-  
-  # fix the seed so that each model train and test the same data
-  set.seed(s)
-  
-  # each data has its own id(1 to 5) to process k fold cross validation
-  data$id <- sample(1:k, nrow(data), replace = TRUE)
-  
-  list    <- 1:k
-  
-  # data frame reset
-  prediction_logit <- testset_copy_logit <- data.frame()
-  
-  #function for k fold
-  for(i in 1:k){
-    
-    # remove rows with id i from dataframe to create training set
-    # select rows with id i to create test set
-    trainset     <- subset(data, id %in% list[-i])
-    testset      <- subset(data, id %in% c(i))
-    
-    model_logit        <- LogitBoost(trainset[, independent], trainset[, dependent], nIter = tt)
-    
-    temp_logit         <- as.data.frame(predict(model_logit, testset))
-    
-    # append this iteration's prediction to the end of the prediction data frame
-    prediction_logit   <- rbind(prediction_logit, temp_logit)
-    
-    # append this iteration's test set to the testset copy data frame
-    testset_copy_logit <- rbind(testset_copy_logit, as.data.frame(testset[, dependent]))
-    
-    # add predictions and actual Sepal Length values
-    result_logit            <- cbind(prediction_logit, testset_copy_logit[, 1])
-    
-    names(result_logit)     <- c("Actual", "Predicted")
-    
-    confusion_matrix_logit  <- table(result_logit$Actual, result_logit$Predicted )
-    
-    accuracy_logit          <- sum(diag(confusion_matrix_logit)) / sum(confusion_matrix_logit)
-    
-    result_logit           <- list("confusion_matrix_logit " = confusion_matrix_logit,
-                                   accuracy_logit          = accuracy_logit)
-    
-  }
-  
-  temp1 <<- (result_logit$accuracy_logit)
-  
-  return(temp1)
-}
-
-result_l <<- list()
-
-for (i in 1:iterations){
-  
-  result_l <<- append(result_l, kfold_logit(i), after = length(result_l))
-  
-}
-
-kfold_gentle <- function(tt){
-  # number of cross validation
-  k       <- 5
-  
-  # fix the seed so that each model train and test the same data
-  set.seed(s)
-  
-  # each data has its own id(1 to 5) to process k fold cross validation
-  data$id <- sample(1:k, nrow(data), replace = TRUE)
-  
-  list    <- 1:k
-  
-  # data frame reset
-  prediction_gentle <- testset_copy_gentle <- data.frame()
-  
-  #function for k fold
-  for(i in 1:k){
-    
-    # remove rows with id i from dataframe to create training set
-    # select rows with id i to create test set
-    trainset     <- subset(data, id %in% list[-i])
-    testset      <- subset(data, id %in% c(i))
-    
-    #run a adaboost model
-    #model_lotit        <- basic_adaboost(trainset[, independent], trainset[, dependent], n_rounds = tt)
-    
-    model_gentle        <- ada(trainset[, independent], trainset[, dependent], loss = "exponential",
-                               type = "gentle", iter = tt)
-    
-    #temp_gentle         <- as.data.frame(predict(model_bm, testset))
-    temp_gentle         <- as.data.frame(predict(model_gentle, testset))
-    
-    # append this iteration's prediction to the end of the prediction data frame
-    prediction_gentle   <- rbind(prediction_gentle, temp_gentle)
-    
-    # append this iteration's test set to the testset copy data frame
-    testset_copy_gentle <- rbind(testset_copy_gentle, as.data.frame(testset[, dependent]))
-    
-    # add predictions and actual Sepal Length values
-    result_gentle            <- cbind(prediction_gentle, testset_copy_gentle[, 1])
-    
-    names(result_gentle)     <- c("Actual", "Predicted")
-    
-    confusion_matrix_gentle  <- table(result_gentle$Actual, result_gentle$Predicted )
-    
-    accuracy_gentle          <- sum(diag(confusion_matrix_gentle)) / sum(confusion_matrix_gentle)
-    
-    result_gentle           <- list("confusion_matrix_gentle " = confusion_matrix_gentle,
-                                    accuracy_gentle          = accuracy_gentle)
-    
-  }
-  
-  temp1 <<- (result_gentle$accuracy_gentle)
-  
-  return(temp1)
-}
-
-result_g <<- list()
-
-for (i in 1:iterations){
-  
-  result_g <<- append(result_g, kfold_gentle(i), after = length(result_g))
-  
-}
-
-
-####################################################################################################
-# 4. plot the result  
-####################################################################################################
-
-plot(1:iterations, result_h, col = "red", xlab = "Iterations", ylab = "Accuracy",
-     ylim = c(min(min(unlist(result_b)),
-                  min(unlist(result_h)),
-                  min(unlist(result_g)),
-                  min(unlist(result_l))),
-              max(max(unlist(result_b)),
-                  max(unlist(result_h)),
-                  max(unlist(result_g)),
-                  max(unlist(result_l)))))
-
-lines(1:iterations,result_h,col = "red")
-
-
-
-# plot the graph of basic adaboost
-par(new = TRUE)
-plot(1:iterations, result_b, col = "green3", xlab = "", ylab = "",
-     ylim = c(min(min(unlist(result_b)),
-                  min(unlist(result_h)),
-                  min(unlist(result_g)),
-                  min(unlist(result_l))),
-              max(max(unlist(result_b)),
-                  max(unlist(result_h)),
-                  max(unlist(result_g)),
-                  max(unlist(result_l)))))
-lines(1:iterations, result_b, col = "green3", lty = 2)
-
-par(new = TRUE)
-plot(1:iterations, result_l, col = "blue", xlab = "", ylab = "",
-     ylim = c(min(min(unlist(result_b)),
-                  min(unlist(result_h)),
-                  min(unlist(result_g)),
-                  min(unlist(result_l))),
-              max(max(unlist(result_b)),
-                  max(unlist(result_h)),
-                  max(unlist(result_g)),
-                  max(unlist(result_l)))))
-lines(1:iterations, result_l, col = "blue", lty = 3)
-
-par(new = TRUE)
-plot(1:iterations, result_g, col = "black", xlab = "", ylab = "",
-     ylim = c(min(min(unlist(result_b)),
-                  min(unlist(result_h)),
-                  min(unlist(result_g)),
-                  min(unlist(result_l))),
-              max(max(unlist(result_b)),
-                  max(unlist(result_h)),
-                  max(unlist(result_g)),
-                  max(unlist(result_l)))))
-lines(1:iterations, result_g, col = "black", lty = 6)
-
-par(new = TRUE)
-legend(1, max(max(unlist(result_b)),
-              max(unlist(result_h)),
-              max(unlist(result_g)),
-              max(unlist(result_l))), legend=c("Heuristic", "Basic", "Logistic", "Gentle"),
-       col=c("red", "green3","blue", "black"), lty=c(1,2,3,6))
